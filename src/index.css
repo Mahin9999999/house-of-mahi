@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-cormorant {
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  }
+  .font-playfair {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Deep Luxury Champagne-Gold Gradient */
+  .text-luxury-gold {
+    background: linear-gradient(135deg, #8C6A2E 0%, #C5A059 40%, #E6CA85 70%, #9B793B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Rich Wine & Gold Luxury Text */
+  .text-luxury-burgundy {
+    color: #4A1525;
+  }
+}

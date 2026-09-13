@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Customer and Administrator profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User full name" },
+        "phoneNumber": { "type": "string", "description": "User phone number" },
+        "role": { "type": "string", "enum": ["customer", "admin", "superadmin"], "description": "Security role" },
+        "address": { "type": "string", "description": "Shipping address" },
+        "city": { "type": "string", "description": "City" },
+        "district": { "type": "string", "description": "District" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Store jewelry products",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "description": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "stock": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "isBestSeller": { "type": "boolean" },
+        "isNewArrival": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "category", "price", "stock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase orders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "deliveryCharge": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "shippingAddress": { "type": "object" },
+        "paymentMethod": { "type": "string", "enum": ["cod", "bkash", "nagad", "card"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "pending", "paid", "failed", "refunded"] },
+        "paymentTransactionId": { "type": "string" },
+        "orderStatus": { "type": "string", "enum": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "orderNumber", "customerPhone", "items", "total", "paymentMethod", "paymentStatus", "orderStatus"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global store settings manageable only by admins",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "deliveryInsideDhaka": { "type": "number" },
+        "deliveryOutsideDhaka": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "UserProfile",
+      "description": "Registered customer and admin user documents"
+    },
+    "products": {
+      "schema": "Product",
+      "description": "Jewelry catalog items"
+    },
+    "orders": {
+      "schema": "Order",
+      "description": "Store customer orders"
+    },
+    "settings": {
+      "schema": "StoreSettings",
+      "description": "General store configuration"
+    }
+  }
+}

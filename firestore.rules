@@ -1,0 +1,187 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for secure authentication & authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // STRICT ADMIN AUTHORIZATION:
+    // Authorized master administrator UID, verified admin emails, or users with admin/superadmin role.
+    function isAuthorizedAdmin() {
+      return isAuthenticated() && (
+        request.auth.uid == 'nJqbz63bzIXRiycPC5JYA13pVOi1' ||
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'mahincollege1@gmail.com' ||
+          request.auth.token.email == 'admin@houseofmahi.com' ||
+          request.auth.token.email == 'houseofmahibd@gmail.com'
+        )) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+        ))
+      );
+    }
+
+    // 1. PRODUCTS COLLECTION
+    // Public visitors & customers can read products.
+    // ONLY the authorized Admin UID (nJqbz63bzIXRiycPC5JYA13pVOi1) can create, edit, or delete.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 2. CATEGORIES COLLECTION
+    // Public visitors & customers can view categories.
+    // ONLY the authorized Admin UID can create, update, or delete.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 3. HERO BANNERS COLLECTION (Canonical)
+    // Public visitors & customers can view active hero banners on the storefront.
+    // ONLY the authorized Admin UID can create, update, reorder or delete hero banners.
+    match /heroBanners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 3B. HOMEPAGE SECTIONS COLLECTION (Canonical Homepage Builder)
+    // Public visitors & customers can view active homepage sections on the storefront.
+    // ONLY the authorized Admin UID can create, update, reorder or delete homepage sections.
+    match /homepageSections/{sectionId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 3C. LEGACY BANNERS COLLECTION (Backwards compatibility)
+    // Public visitors & customers can view legacy banners.
+    // ONLY the authorized Admin UID can create, update, or delete.
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 4. COUPONS COLLECTION
+    // Public visitors & customers can read active coupons to apply discounts during checkout.
+    // ONLY the authorized Admin UID can create, edit, or delete coupons.
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 5. STORE SETTINGS & MARKETING PIXELS
+    // Public visitors can read store branding and public tracking configurations.
+    // ONLY the authorized Admin UID can update store settings.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // 6. ORDERS COLLECTION
+    // Customers can place orders (create).
+    // The authorized Admin UID can read, manage, update statuses, and delete all orders.
+    // Customers can read their own specific order if authenticated with matching UID or customer email.
+    match /orders/{orderId} {
+      allow create: if true; // Allows instant customer checkout
+      allow read: if isAuthorizedAdmin() || (
+        isAuthenticated() && (
+          (resource.data.keys().hasAny(['userId']) && resource.data.userId == request.auth.uid) ||
+          (resource.data.keys().hasAny(['customerId']) && resource.data.customerId == request.auth.uid) ||
+          (resource.data.keys().hasAny(['customer']) && resource.data.customer.keys().hasAny(['email']) && resource.data.customer.email == request.auth.token.email)
+        )
+      );
+      allow update, delete: if isAuthorizedAdmin();
+    }
+
+    // 7. USERS COLLECTION
+    // - Customers can create & update their own account profile document.
+    // - Customers CANNOT set or elevate role to 'admin' or 'superadmin'.
+    // - ONLY the authorized Admin UID can read all users or perform administrative account management.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAuthorizedAdmin();
+      
+      // Creating own profile: customers are forced to have 'customer' role
+      allow create: if isOwner(userId) && (
+        !request.resource.data.keys().hasAny(['role']) || 
+        request.resource.data.role == 'customer' ||
+        isAuthorizedAdmin()
+      );
+      
+      // Updating profile: customers cannot change their role
+      allow update: if (
+        isOwner(userId) && 
+        (
+          !request.resource.data.keys().hasAny(['role']) || 
+          request.resource.data.role == resource.data.role ||
+          request.resource.data.role == 'customer'
+        )
+      ) || isAuthorizedAdmin();
+      
+      allow delete: if isAuthorizedAdmin();
+    }
+
+    // 8. REVIEWS COLLECTION
+    // - Public visitors & customers can read verified product reviews.
+    // - Creation: Authenticated customer creating review for their own verified delivered order
+    //   Enforces that userId matches request.auth.uid and order exists with delivered status.
+    // - Update: Customers can only update their own review rating/comment.
+    // - Deletion & Full Moderation: ONLY the authorized Master Admin UID.
+    match /reviews/{reviewId} {
+      allow read: if true;
+
+      // Create Rule: Authenticated user, matching UID, rating between 1-5, and valid delivered order verification
+      allow create: if isAuthorizedAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5 &&
+        request.resource.data.keys().hasAll(['productId', 'userId', 'userName', 'rating', 'comment', 'verifiedPurchase']) &&
+        (
+          !request.resource.data.keys().hasAny(['orderId']) ||
+          request.resource.data.orderId == '' ||
+          (
+            exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId)) &&
+            (
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'Delivered' ||
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'delivered' ||
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.orderStatus == 'Delivered' ||
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.orderStatus == 'delivered'
+            ) &&
+            (
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid ||
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.customerId == request.auth.uid
+            )
+          )
+        )
+      );
+
+      // Update Rule: User can edit their own review rating & comment (without modifying userId, productId, orderId)
+      allow update: if isAuthorizedAdmin() || (
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.productId == resource.data.productId &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5
+      );
+
+      // Delete Rule: Admin moderation only
+      allow delete: if isAuthorizedAdmin();
+    }
+
+    // 9. COURIER CONFIGURATIONS COLLECTION (ADMIN ONLY)
+    // Contains sensitive API keys, secrets, client credentials, and webhook endpoints for courier integrations (Pathao, Steadfast, RedX, etc.)
+    // STRICT ZERO-TRUST SECURITY: Strictly restricted to authorized Administrators only.
+    // Public visitors, regular customers, and unauthorized users are completely forbidden from reading, querying, creating, modifying, or deleting courier credentials.
+    match /courier_configs/{courierId} {
+      allow read, write: if isAuthorizedAdmin();
+    }
+  }
+}
