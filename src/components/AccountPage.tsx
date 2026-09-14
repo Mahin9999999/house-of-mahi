@@ -17,13 +17,15 @@ import {
   Edit2,
   Check,
   Star,
-  PackageCheck
+  PackageCheck,
+  LogIn
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Order, AccountTabType, Review } from '../types';
 import { db } from '../firebase/config';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { ProductReviewsTab } from './account/ProductReviewsTab';
+import { CustomerAuthModal } from './CustomerAuthModal';
 import { reviewService } from '../services/reviewService';
 
 interface AccountPageProps {
@@ -45,6 +47,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Editable Profile / Address state
   const [isEditingAddress, setIsEditingAddress] = useState(false);
@@ -167,41 +170,70 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
             <div className="flex items-center gap-3.5 sm:gap-5 min-w-0 w-full sm:w-auto">
               <div className="w-14 h-14 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-inner font-serif text-xl sm:text-2xl font-bold">
-                {(userProfile?.name || currentUser?.displayName || 'M')[0].toUpperCase()}
+                {currentUser ? (
+                  (userProfile?.name || currentUser?.displayName || 'V')[0].toUpperCase()
+                ) : (
+                  <User className="w-7 h-7 sm:w-10 sm:h-10 text-stone-300" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <h1 className="text-lg sm:text-3xl font-serif font-bold text-white truncate max-w-full">
-                    {userProfile?.name || currentUser?.displayName || 'Valued Customer'}
-                  </h1>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] sm:text-xs font-medium shrink-0 whitespace-nowrap">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Customer
-                  </span>
-                </div>
-                <div className="text-stone-300 text-xs sm:text-sm mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="inline-flex items-center gap-1.5 min-w-0">
-                    <Mail className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                    <span className="truncate max-w-[200px] sm:max-w-none">{currentUser?.email || 'Registered via Phone'}</span>
-                  </span>
-                  {userProfile?.phone && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="text-stone-500 hidden sm:inline">•</span>
-                      <Phone className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <span>{userProfile.phone}</span>
-                    </span>
-                  )}
-                </div>
+                {currentUser ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <h1 className="text-lg sm:text-3xl font-serif font-bold text-white truncate max-w-full">
+                        {userProfile?.name || currentUser?.displayName || 'Valued Customer'}
+                      </h1>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-[11px] sm:text-xs font-medium shrink-0 whitespace-nowrap">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Verified Customer
+                      </span>
+                    </div>
+                    <div className="text-stone-300 text-xs sm:text-sm mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <Mail className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                        <span className="truncate max-w-[200px] sm:max-w-none">{currentUser?.email || 'Registered via Phone'}</span>
+                      </span>
+                      {userProfile?.phone && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-stone-500 hidden sm:inline">•</span>
+                          <Phone className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                          <span>{userProfile.phone}</span>
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <h1 className="text-lg sm:text-3xl font-serif font-bold text-white truncate max-w-full">
+                        Welcome, Guest
+                      </h1>
+                    </div>
+                    <p className="text-stone-300 text-xs sm:text-sm mt-1.5">
+                      Please log in to see your profile
+                    </p>
+                  </>
+                )}
               </div>
             </div>
             
-            <button
-              onClick={() => logout()}
-              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-200 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
+            {currentUser ? (
+              <button
+                onClick={() => logout()}
+                className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-200 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#b8972e] text-stone-950 font-semibold text-xs flex items-center gap-2 shadow-lg transition-all shrink-0"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In / Register
+              </button>
+            )}
           </div>
         </div>
 
@@ -662,6 +694,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Customer Authentication Modal for Guest Login/Register */}
+      <CustomerAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };
