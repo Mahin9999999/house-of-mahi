@@ -384,11 +384,11 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       );
       unsubscribers.push(unsubHeroBanners);
 
-      // 5. Subscribe to HOMEPAGE SECTIONS (Canonical Firestore sync with resilient cache fallback)
+      // 5. Subscribe to HOMEPAGE SECTIONS (Canonical Firestore Single Source of Truth)
       const unsubHomepageSections = subscribeToHomepageSections(
         (firestoreSections) => {
           if (firestoreSections && firestoreSections.length > 0) {
-            // Canonical Firestore source has records -> normalize, sort, update store & cache
+            // Canonical Firestore source has records -> normalize, sort, immediately update store & overwrite cache
             const normalized = firestoreSections
               .map((s, idx) => normalizeHomepageSection(s, idx + 1))
               .sort((a, b) => (a.sortOrder ?? a.displayOrder ?? 0) - (b.sortOrder ?? b.displayOrder ?? 0));
@@ -396,24 +396,15 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
             set({ homepageSections: normalized });
             safePersistHomepageCache(normalized);
           } else {
-            // Firestore snapshot returned 0 documents (unseeded or empty database)
-            // Prevent wiping out valid UI state if local cache or memory already has sections
-            set((state) => {
-              if (state.homepageSections && state.homepageSections.length > 0) {
-                // Keep existing in-memory state
-                return {};
-              }
-              const cached = getHydratedHomepageSections();
-              if (cached.length > 0) {
-                return { homepageSections: cached };
-              }
-              return { homepageSections: [] };
-            });
+            // Firestore snapshot returned 0 documents (empty collection or all sections deleted)
+            // Authoritative state is empty: NO hardcoded/default/demo sections allowed
+            set({ homepageSections: [] });
+            safePersistHomepageCache([]);
           }
         },
         (err) => {
           console.warn('Homepage sections sync warning:', err.message);
-          // If firestore read error occurs, fallback gracefully to hydrated cache
+          // If Firestore network error occurs on initial load, only hydrate if cache exists
           set((state) => {
             if (!state.homepageSections || state.homepageSections.length === 0) {
               const cached = getHydratedHomepageSections();

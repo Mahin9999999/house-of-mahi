@@ -420,15 +420,10 @@ export const HomepageModule: React.FC = () => {
           console.warn('LocalStorage save note:', e);
         }
       } else {
-        // If Firestore is empty, check if we have offline/local sections
+        // If Firestore is empty, sync store and local cache to reflect real Cloud Firestore state
+        useAdminStore.setState({ homepageSections: [] });
         try {
-          const cached = localStorage.getItem(HOMEPAGE_SECTIONS_STORAGE_KEY);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              useAdminStore.setState({ homepageSections: parsed });
-            }
-          }
+          localStorage.removeItem(HOMEPAGE_SECTIONS_STORAGE_KEY);
         } catch (e) {
           // ignore
         }
@@ -478,11 +473,17 @@ export const HomepageModule: React.FC = () => {
         localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(list));
         showNotification('success', `Refreshed ${list.length} sections from Cloud Firestore.`);
       } else {
-        showNotification('success', 'Cloud Firestore layout is currently empty.');
+        useAdminStore.setState({ homepageSections: [] });
+        try {
+          localStorage.removeItem(HOMEPAGE_SECTIONS_STORAGE_KEY);
+        } catch (e) {
+          // ignore
+        }
+        showNotification('success', 'Cloud Firestore layout is currently empty (0 sections).');
       }
     } catch (err: any) {
       console.error('Manual refresh error:', err);
-      showNotification('error', `Refresh note: ${err?.message || 'Failed to fetch from Firestore'}`);
+      showNotification('error', `Refresh error: ${err?.message || 'Failed to fetch from Firestore'}`);
     } finally {
       setIsRefreshing(false);
     }
@@ -778,37 +779,38 @@ export const HomepageModule: React.FC = () => {
       updatedAt: now
     };
 
-    // 1. Immediately update reactive Zustand store (so App.tsx storefront updates in real-time)
-    let nextList: HomepageSection[] = [];
-    if (editingSection) {
-      nextList = homepageSections.map(s => s.id === editingSection.id ? preparedSection : s);
-    } else {
-      nextList = [...homepageSections, preparedSection];
-    }
-    nextList.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-    useAdminStore.setState({ homepageSections: nextList });
-
-    // 2. Persist to Local Storage Cache for 100% Refresh Retention
-    try {
-      localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(nextList));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-
-    // 3. Persist to Cloud Firestore
+    // 1. Firestore MUST be the source of truth: Persist to Cloud Firestore FIRST
     try {
       const docRef = doc(db, 'homepageSections', sectionId);
       const sanitized = cleanPayload(preparedSection);
       await setDoc(docRef, sanitized, { merge: true });
-      showNotification('success', `Homepage section "${formData.title}" saved to Cloud Firestore!`);
-    } catch (fsErr: any) {
-      console.warn('Firestore write warning:', fsErr);
-      showNotification('success', `Section "${formData.title}" saved locally and active in this browser.`);
-    } finally {
-      setIsSaving(false);
+
+      // 2. Only after Cloud Firestore write succeeds, update Zustand state and localStorage cache
+      let nextList: HomepageSection[] = [];
+      if (editingSection) {
+        nextList = homepageSections.map(s => s.id === editingSection.id ? preparedSection : s);
+      } else {
+        nextList = [...homepageSections, preparedSection];
+      }
+      nextList.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+      useAdminStore.setState({ homepageSections: nextList });
+
+      try {
+        localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(nextList));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+
+      showNotification('success', `Homepage section "${formData.title}" saved successfully to Cloud Firestore!`);
       setEditingSection(null);
       setIsAddingSection(false);
+    } catch (fsErr: any) {
+      console.error('Firestore save section failed:', fsErr);
+      const errorMsg = fsErr?.message || 'Permission denied, unauthenticated, or network issue';
+      showNotification('error', `Firestore Save Failed: ${errorMsg}. Section was NOT saved.`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -820,21 +822,7 @@ export const HomepageModule: React.FC = () => {
     const nextStatus = !currentActive;
     const now = new Date().toISOString();
 
-    const updatedList = homepageSections.map(s => 
-      s.id === section.id 
-        ? { ...s, isActive: nextStatus, enabled: nextStatus, updatedAt: now } 
-        : s
-    );
-
-    // 1. Update State & LocalStorage
-    useAdminStore.setState({ homepageSections: updatedList });
-    try {
-      localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(updatedList));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-
-    // 2. Persist to Cloud Firestore
+    // 1. Persist to Cloud Firestore FIRST
     try {
       const docRef = doc(db, 'homepageSections', section.id);
       await setDoc(docRef, { 
@@ -842,10 +830,25 @@ export const HomepageModule: React.FC = () => {
         enabled: nextStatus, 
         updatedAt: now 
       }, { merge: true });
-      showNotification('success', `Section status changed to ${nextStatus ? 'Active' : 'Disabled'}.`);
+
+      // 2. Update local state & cache on success
+      const updatedList = homepageSections.map(s => 
+        s.id === section.id 
+          ? { ...s, isActive: nextStatus, enabled: nextStatus, updatedAt: now } 
+          : s
+      );
+
+      useAdminStore.setState({ homepageSections: updatedList });
+      try {
+        localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+
+      showNotification('success', `Section status changed to ${nextStatus ? 'Active' : 'Disabled'} in Cloud Firestore.`);
     } catch (err: any) {
-      console.warn('Firestore toggle warning:', err);
-      showNotification('success', `Section status changed to ${nextStatus ? 'Active' : 'Disabled'} (Local).`);
+      console.error('Firestore toggle error:', err);
+      showNotification('error', `Failed to update status in Firestore: ${err?.message || 'Error occurred'}`);
     }
   };
 
@@ -870,15 +873,7 @@ export const HomepageModule: React.FC = () => {
       updatedAt: now
     }));
 
-    // 1. Immediate State & LocalStorage Update
-    useAdminStore.setState({ homepageSections: reorderedWithOrders });
-    try {
-      localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(reorderedWithOrders));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-
-    // 2. Batch Update in Cloud Firestore
+    // 1. Batch Update in Cloud Firestore FIRST
     try {
       const batch = writeBatch(db);
       reorderedWithOrders.forEach(item => {
@@ -890,21 +885,18 @@ export const HomepageModule: React.FC = () => {
         }, { merge: true });
       });
       await batch.commit();
+
+      // 2. Update local State & LocalStorage on success
+      useAdminStore.setState({ homepageSections: reorderedWithOrders });
+      try {
+        localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(reorderedWithOrders));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
       showNotification('success', 'Homepage layout order updated & synced to Cloud Firestore!');
     } catch (bErr: any) {
-      console.warn('Batch order write warning, persisting individually:', bErr);
-      for (const item of reorderedWithOrders) {
-        try {
-          await setDoc(doc(db, 'homepageSections', item.id), { 
-            sortOrder: item.sortOrder, 
-            displayOrder: item.sortOrder, 
-            updatedAt: item.updatedAt 
-          }, { merge: true });
-        } catch (e) {
-          // ignore
-        }
-      }
-      showNotification('success', 'Layout order saved and persistent.');
+      console.error('Batch order write failed:', bErr);
+      showNotification('error', `Failed to save order to Cloud Firestore: ${bErr?.message || 'Error occurred'}`);
     }
   };
 
@@ -916,24 +908,23 @@ export const HomepageModule: React.FC = () => {
       return;
     }
 
-    const updatedList = homepageSections.filter((s) => s.id !== section.id);
-
-    // 1. Update State & LocalStorage
-    useAdminStore.setState({ homepageSections: updatedList });
-    try {
-      localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(updatedList));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-
-    // 2. Delete from Cloud Firestore
+    // 1. Delete from Cloud Firestore FIRST
     try {
       const docRef = doc(db, 'homepageSections', section.id);
       await deleteDoc(docRef);
+
+      // 2. Update local state & cache on success
+      const updatedList = homepageSections.filter((s) => s.id !== section.id);
+      useAdminStore.setState({ homepageSections: updatedList });
+      try {
+        localStorage.setItem(HOMEPAGE_SECTIONS_STORAGE_KEY, JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
       showNotification('success', `Section "${section.title}" deleted from Cloud Firestore.`);
     } catch (err: any) {
-      console.warn('Firestore delete warning:', err);
-      showNotification('success', `Section "${section.title}" removed locally.`);
+      console.error('Firestore delete error:', err);
+      showNotification('error', `Failed to delete from Firestore: ${err?.message || 'Permission or network error'}`);
     }
   };
 
