@@ -34,8 +34,10 @@ import {
   AlertTriangle,
   Zap,
   CheckCircle2,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAdminStore } from '../../store/useAdminStore';
 import { Order, OrderStatus } from '../../types';
 import { OrderDetailsModal } from './OrderDetailsModal';
@@ -55,6 +57,7 @@ export const OrdersModule: React.FC = () => {
     couriers,
     updateOrderStatus, 
     bulkUpdateOrderStatus, 
+    bulkDeleteOrders,
     autoBookOrderWithCourier,
     isSyncing 
   } = useAdminStore();
@@ -73,6 +76,8 @@ export const OrdersModule: React.FC = () => {
   const [bulkActionTargetStatus, setBulkActionTargetStatus] = useState<OrderStatus | null>(null);
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [bulkNotification, setBulkNotification] = useState<{ message: string; type: 'success' | 'warning' | 'error' } | null>(null);
 
   // Safe date parsing helper for timestamps/strings
@@ -344,6 +349,53 @@ export const OrdersModule: React.FC = () => {
     setTimeout(() => {
       setBulkNotification(null);
     }, 5000);
+  };
+
+  // Bulk Permanent Delete Orders
+  const initiateBulkDelete = () => {
+    if (selectedOrderIds.size === 0) return;
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const executeBulkDelete = async () => {
+    if (selectedOrderIds.size === 0) return;
+
+    setIsDeletingBulk(true);
+    const targetIds = Array.from(selectedOrderIds) as string[];
+
+    try {
+      const result = await bulkDeleteOrders(targetIds);
+
+      setIsDeletingBulk(false);
+      setIsDeleteConfirmOpen(false);
+
+      if (result.success && result.deletedCount > 0) {
+        setSelectedOrderIds(new Set());
+        toast.success(`Successfully deleted ${result.deletedCount} order${result.deletedCount > 1 ? 's' : ''} permanently from Firestore!`, {
+          duration: 4000,
+          id: 'bulk-delete-success'
+        });
+      } else if (result.deletedCount > 0 && result.failedCount > 0) {
+        // Partial success: clear selection, notify of partial failure
+        setSelectedOrderIds(new Set());
+        toast.error(`${result.deletedCount} order(s) deleted, but ${result.failedCount} order(s) failed to delete from Firestore.`, {
+          duration: 5000,
+          id: 'bulk-delete-partial'
+        });
+      } else {
+        toast.error(`Failed to delete selected orders from Firestore. Please verify admin permissions.`, {
+          duration: 5000,
+          id: 'bulk-delete-fail'
+        });
+      }
+    } catch (err: any) {
+      setIsDeletingBulk(false);
+      setIsDeleteConfirmOpen(false);
+      toast.error(`Error deleting orders: ${err.message || 'Unknown error'}`, {
+        duration: 5000,
+        id: 'bulk-delete-error'
+      });
+    }
   };
 
   // Quick 1-Click Dispatch from Table Row
@@ -708,9 +760,18 @@ export const OrdersModule: React.FC = () => {
             </div>
             <button
               onClick={handleClearSelection}
-              className="text-xs text-neutral-400 hover:text-white underline transition-colors"
+              className="text-xs text-neutral-400 hover:text-white underline transition-colors cursor-pointer"
             >
               Deselect All
+            </button>
+            <button
+              disabled={isBulkProcessing || isDeletingBulk}
+              onClick={initiateBulkDelete}
+              className="ml-1 sm:ml-2 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer"
+              title={`Permanently delete ${selectedOrderIds.size} selected order(s) from Firestore`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-100" />
+              Delete Selected ({selectedOrderIds.size})
             </button>
           </div>
 
@@ -1072,6 +1133,61 @@ export const OrdersModule: React.FC = () => {
                   <>
                     <Check className="w-3.5 h-3.5" />
                     Confirm & Update ({selectedOrderIds.size})
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6B. Bulk Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 animate-fadeIn space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">Delete Selected Orders</h3>
+                <p className="text-xs text-neutral-500">Permanent Firestore Deletion</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-rose-50/70 border border-rose-200 rounded-xl text-xs space-y-2">
+              <p className="text-neutral-800 font-medium">
+                Are you sure you want to permanently delete <strong className="text-rose-900 font-bold">{selectedOrderIds.size}</strong> selected {selectedOrderIds.size === 1 ? 'order' : 'orders'}?
+              </p>
+              <p className="text-[11px] text-rose-700">
+                This action cannot be undone. All selected order records will be permanently removed from Cloud Firestore.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingBulk}
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingBulk}
+                onClick={executeBulkDelete}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingBulk ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Deleting {selectedOrderIds.size} Orders...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Permanently Delete ({selectedOrderIds.size})
                   </>
                 )}
               </button>

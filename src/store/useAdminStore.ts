@@ -37,6 +37,8 @@ import {
   subscribeToOrders,
   createOrderInFirestore,
   updateOrderStatusInFirestore,
+  deleteOrderFromFirestore,
+  bulkDeleteOrdersFromFirestore,
   subscribeToCategories,
   setCategoryInFirestore,
   deleteCategoryFromFirestore,
@@ -192,6 +194,8 @@ interface AdminStoreState {
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingNumber?: string, courierName?: string) => Promise<void>;
   bulkUpdateOrderStatus: (orderIds: string[], status: OrderStatus) => Promise<{ successCount: number; failCount: number }>;
   addOrderAdminNote: (orderId: string, note: string) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
+  bulkDeleteOrders: (orderIds: string[]) => Promise<{ success: boolean; deletedCount: number; failedCount: number }>;
 
   // 1. HERO BANNERS (Canonical Collection: 'heroBanners')
   heroBanners: HeroBanner[];
@@ -850,6 +854,46 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       } catch (err) {
         console.error('Failed to update admin note in Firestore:', err);
       }
+    }
+  },
+
+  deleteOrder: async (orderId: string) => {
+    try {
+      const ok = await deleteOrderFromFirestore(orderId);
+      if (ok) {
+        set((state) => ({
+          orders: state.orders.filter((o) => o.id !== orderId && o.orderNumber !== orderId)
+        }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      return false;
+    }
+  },
+
+  bulkDeleteOrders: async (orderIds: string[]) => {
+    if (!orderIds || orderIds.length === 0) {
+      return { success: true, deletedCount: 0, failedCount: 0 };
+    }
+    try {
+      const res = await bulkDeleteOrdersFromFirestore(orderIds);
+      const failedSet = new Set(res.failedIds || []);
+      const successfullyDeleted = new Set(orderIds.filter((id) => !failedSet.has(id)));
+
+      set((state) => ({
+        orders: state.orders.filter((o) => !successfullyDeleted.has(o.id) && !successfullyDeleted.has(o.orderNumber))
+      }));
+
+      return {
+        success: res.success,
+        deletedCount: res.deletedCount,
+        failedCount: res.failedCount
+      };
+    } catch (error) {
+      console.error('Failed to bulk delete orders:', error);
+      return { success: false, deletedCount: 0, failedCount: orderIds.length };
     }
   },
 

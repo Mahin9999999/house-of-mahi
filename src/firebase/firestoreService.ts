@@ -824,6 +824,67 @@ export async function updateOrderStatusInFirestore(
   }
 }
 
+export async function deleteOrderFromFirestore(orderId: string): Promise<boolean> {
+  try {
+    if (!orderId) return false;
+    const docRef = doc(db, 'orders', orderId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error(`Error deleting order ${orderId}:`, error);
+    return false;
+  }
+}
+
+export async function bulkDeleteOrdersFromFirestore(orderIds: string[]): Promise<{
+  success: boolean;
+  deletedCount: number;
+  failedCount: number;
+  failedIds: string[];
+}> {
+  if (!orderIds || orderIds.length === 0) {
+    return { success: true, deletedCount: 0, failedCount: 0, failedIds: [] };
+  }
+
+  let deletedCount = 0;
+  const failedIds: string[] = [];
+
+  // Firestore batch allows up to 500 operations per batch
+  const chunkSize = 400;
+  for (let i = 0; i < orderIds.length; i += chunkSize) {
+    const chunk = orderIds.slice(i, i + chunkSize);
+    try {
+      const batch = writeBatch(db);
+      chunk.forEach((id) => {
+        const docRef = doc(db, 'orders', id);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+      deletedCount += chunk.length;
+    } catch (batchError) {
+      console.warn('Batch deletion failed, falling back to individual deletions for chunk:', batchError);
+      // Fallback: Delete individually so partial success is preserved
+      for (const singleId of chunk) {
+        try {
+          const docRef = doc(db, 'orders', singleId);
+          await deleteDoc(docRef);
+          deletedCount += 1;
+        } catch (singleError) {
+          console.error(`Failed to delete order ${singleId}:`, singleError);
+          failedIds.push(singleId);
+        }
+      }
+    }
+  }
+
+  return {
+    success: failedIds.length === 0,
+    deletedCount,
+    failedCount: failedIds.length,
+    failedIds
+  };
+}
+
 // ---------------- STORE SETTINGS ----------------
 export async function getStoreSettingsFromFirestore(): Promise<StoreSettings | null> {
   try {
