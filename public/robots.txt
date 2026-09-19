@@ -1,0 +1,20 @@
+# House of Mahi Production Robots Directives
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /about
+Allow: /contact
+Allow: /faq
+Allow: /product/
+Allow: /category/
+
+# Protect Administrative, Private and Session Endpoints
+Disallow: /admin
+Disallow: /admin/
+Disallow: /secure-management-login
+Disallow: /checkout
+Disallow: /account
+Disallow: /cart
+Disallow: /api/
+
+Sitemap: https://houseofmahibd.com/sitemap.xml
