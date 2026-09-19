@@ -197,7 +197,7 @@ export function App() {
   // Wrapper for setSelectedCategory to maintain compatibility and sync /category/:slug
   const setSelectedCategory = (newCat: string) => {
     setSelectedCategoryState(newCat);
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && activeTab === 'shop') {
       const targetPath = newCat && newCat !== 'all' ? `/category/${encodeURIComponent(newCat)}` : '/shop';
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab: 'shop', category: newCat }, '', targetPath);
