@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://houseofmahibd.com/</loc>
     <lastmod>2026-09-19</lastmod>
@@ -28,138 +28,336 @@
     <loc>https://houseofmahibd.com/faq</loc>
     <lastmod>2026-09-19</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/category/necklaces</loc>
-    <lastmod>2026-09-19</lastmod>
+    <loc>https://houseofmahibd.com/category/nice-fation</loc>
+    <lastmod>2026-08-29</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/best-sellers</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/new-arrivals</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/hijab-modest-wear</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/jewellery-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/bags</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/watches</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/makeup-beauty</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/kids-baby</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/sale-offers</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/hijab</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/abaya</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/khimar</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/modest-dress</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/hijab-inner-undercap</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/hijab-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://houseofmahibd.com/category/earrings</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://houseofmahibd.com/category/rings</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://houseofmahibd.com/category/bangles-bracelets</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://houseofmahibd.com/category/bags-accessories</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://houseofmahibd.com/category/small-bags</loc>
-    <lastmod>2026-09-19</lastmod>
+    <lastmod>2026-09-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/category/hand-bags</loc>
-    <lastmod>2026-09-19</lastmod>
+    <loc>https://houseofmahibd.com/category/necklace</loc>
+    <lastmod>2026-09-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p1</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/bracelet</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Elegant Pearl Drop Earrings</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p2</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/ring</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Gold Plated Bridal Choker Set</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p3</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/hair-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Sparkling Crystal Stone Ring</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p4</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/jewellery-sets</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Royal Kundan Antique Choker</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p5</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/sunglasses</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Meenakari Pearl Jhumka</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p6</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/glass-bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1611591475140-13e7100b7d34?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Rose Gold CZ Stone Bracelet</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p7</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/metal-bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Gold Polish Hanging Jhumka</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p8</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/stone-bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Rajasthani Kundan Neckpiece</image:title>
-    </image:image>
   </url>
   <url>
-    <loc>https://houseofmahibd.com/product/p9</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://houseofmahibd.com/category/fashion-bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?auto=format&amp;fit=crop&amp;q=80&amp;w=800</image:loc>
-      <image:title>Zari Embroidered Silk Potli Bag</image:title>
-    </image:image>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/bangles-sets</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/traditional-bangles</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/handbag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/shoulder-bag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/crossbody-bag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/tote-bag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/backpack</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/wallet</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/mini-bag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/clutch-bag</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/womens-watches</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/mens-watches</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/couple-watches</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/fashion-watches</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/watch-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/face-makeup</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/eye-makeup</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/lip-makeup</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/makeup-tools</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/skincare</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/beauty-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/baby-clothing</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/kids-clothing</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/baby-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/kids-accessories</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/category/toys-gifts</loc>
+    <lastmod>2026-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://houseofmahibd.com/product/hom-prod-1789362392007</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>
