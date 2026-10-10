@@ -17,6 +17,7 @@ import { OrderSuccessModal } from './components/OrderSuccessModal';
 import { QuickViewModal } from './components/QuickViewModal';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
+import { SplashEntrance } from './components/SplashEntrance';
 import { AboutPage } from './components/AboutPage';
 import { ContactPage } from './components/ContactPage';
 import { AccountPage } from './components/AccountPage';
@@ -1091,6 +1092,8 @@ export function App() {
   // ==========================================
   return (
     <div className="min-h-screen bg-[#FFFDF9] text-[#2C221E] font-sans flex flex-col selection:bg-[#4A1525] selection:text-[#F3E8DC]">
+      {/* Premium App-Style Logo Entrance Animation */}
+      <SplashEntrance />
       
       {/* Global React Hot Toast Notification Container */}
       <Toaster 
