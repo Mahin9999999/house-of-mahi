@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Star, 
   ShieldCheck, 
@@ -17,9 +17,12 @@ interface ProductReviewsProps {
   onNavigateToAccountReviews?: () => void;
 }
 
+// Module-level stable empty array reference prevents re-instantiating default prop on every render
+const EMPTY_INITIAL_REVIEWS: Review[] = [];
+
 export const ProductReviews: React.FC<ProductReviewsProps> = ({
   productId,
-  initialReviews = [],
+  initialReviews = EMPTY_INITIAL_REVIEWS,
   onNavigateToAccountReviews,
 }) => {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
@@ -27,7 +30,13 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
   const [selectedRatingFilter, setSelectedRatingFilter] = useState<number | 'all'>('all');
   const [helpfulLikes, setHelpfulLikes] = useState<{ [key: string]: boolean }>({});
 
-  // Real-time Firestore subscription for this product's reviews
+  // Maintain latest initialReviews reference without triggering effect re-execution
+  const initialReviewsRef = useRef<Review[]>(initialReviews);
+  useEffect(() => {
+    initialReviewsRef.current = initialReviews;
+  }, [initialReviews]);
+
+  // Real-time Firestore subscription for this product's reviews (keyed strictly by productId)
   useEffect(() => {
     if (!productId) {
       setReviews([]);
@@ -40,8 +49,8 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
       // Merge live reviews or fallback to approved/initial if none in db
       if (liveReviews && liveReviews.length > 0) {
         setReviews(liveReviews);
-      } else if (initialReviews && initialReviews.length > 0) {
-        setReviews(initialReviews);
+      } else if (initialReviewsRef.current && initialReviewsRef.current.length > 0) {
+        setReviews(initialReviewsRef.current);
       } else {
         setReviews([]);
       }
@@ -51,7 +60,7 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [productId, initialReviews]);
+  }, [productId]);
 
   // Compute Review Metrics
   const totalReviews = reviews.length;

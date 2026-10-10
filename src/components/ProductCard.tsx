@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { Product } from '../types';
 
@@ -19,11 +19,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onBuyNow,
   onQuickView
 }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   return (
-    <div className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
+    <div className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group motion-reduce:hover:translate-y-0 motion-reduce:transition-none">
       <div>
         {/* Product Image & Wishlist Button */}
-        <div className="relative aspect-square overflow-hidden bg-white">
+        <div className="relative aspect-square overflow-hidden bg-slate-100">
           <a 
             href={`/product/${encodeURIComponent(product.id)}`}
             onClick={(e) => {
@@ -39,18 +41,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <img 
               src={product.image} 
               alt={product.imageAlt || `${product.name} House of Mahi Bangladesh`} 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+              onLoad={() => setImageLoaded(true)}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ease-out cursor-pointer motion-reduce:group-hover:scale-100 motion-reduce:transition-none ${
+                imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
               referrerPolicy="no-referrer"
               loading="lazy"
             />
           </a>
           <button 
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggleWishlist(product.id);
             }}
-            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs text-slate-600 hover:text-[#4A1525] transition-colors z-10"
-            aria-label="Wishlist"
+            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs text-slate-600 hover:text-[#4A1525] active:scale-90 transition-all duration-150 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1525]/30 motion-reduce:active:scale-100"
+            aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
           >
             <Heart size={15} className={isWishlisted ? 'fill-[#4A1525] text-[#4A1525]' : ''} />
           </button>
@@ -67,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   onQuickView(product);
                 }
               }}
-              className="hover:text-[#4A1525] block truncate"
+              className="hover:text-[#4A1525] block truncate focus-visible:underline focus-visible:outline-none"
             >
               {product.name}
             </a>
@@ -85,15 +91,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Dual Buttons (Add to Cart & Buy Now) */}
       <div className="p-2 pt-0 space-y-1.5">
         <button 
+          type="button"
           onClick={() => onAddToCart(product)}
-          className="w-full border border-[#4A1525] text-[#4A1525] hover:bg-[#4A1525] hover:text-white text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-colors"
+          className="w-full border border-[#4A1525] text-[#4A1525] hover:bg-[#4A1525] hover:text-white active:scale-[0.98] text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all duration-150 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1525]/30 cursor-pointer"
         >
           <ShoppingBag size={12} />
           <span>ADD TO CART</span>
         </button>
         <button 
+          type="button"
           onClick={() => onBuyNow(product)}
-          className="w-full bg-[#4A1525] hover:bg-[#360F1B] text-white text-[11px] font-bold py-1.5 rounded-lg transition-colors shadow-xs"
+          className="w-full bg-[#4A1525] hover:bg-[#360F1B] active:scale-[0.98] text-white text-[11px] font-bold py-1.5 rounded-lg transition-all duration-150 shadow-xs motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1525]/30 cursor-pointer"
         >
           BUY NOW
         </button>
@@ -101,3 +109,4 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
+

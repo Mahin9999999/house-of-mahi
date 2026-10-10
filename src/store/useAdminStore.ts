@@ -20,7 +20,6 @@ import {
   CourierBookingResult
 } from '../types';
 import { 
-  PRODUCTS, 
   CATEGORIES, 
   INITIAL_ORDERS, 
   MARKETING_PIXELS_CONFIG, 
@@ -304,11 +303,7 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       // 1. Subscribe to Products
       const unsubProducts = subscribeToProducts(
         (firestoreProducts) => {
-          if (firestoreProducts && firestoreProducts.length > 0) {
-            set({ products: firestoreProducts, isSyncing: false });
-          } else {
-            set({ products: PRODUCTS, isSyncing: false });
-          }
+          set({ products: firestoreProducts || [], isSyncing: false });
         },
         (err) => {
           console.warn('Products sync warning:', err.message);
@@ -520,7 +515,7 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
   },
 
   // Products CRUD with Firestore Persistence
-  products: PRODUCTS,
+  products: [],
 
   addProduct: async (newProductData) => {
     const newId = `hom-prod-${Date.now()}`;

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Home, ShoppingBag, Heart, User, PackageCheck, ShieldCheck, 
   PhoneCall, X, ChevronRight, ChevronDown, Facebook, Instagram, Youtube, HelpCircle, MessageCircle, MapPin 
 } from 'lucide-react';
 import logoImg from '../assets/images/houseofmahi_logo_1786477060132.jpg';
 import { useAdminStore } from '../store/useAdminStore';
+import { lockBodyScroll, unlockBodyScroll } from './CartDrawer';
 
 // Custom TikTok Icon
 const TikTokIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -37,9 +38,106 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
   onOpenTrackOrder
 }) => {
   const categories = useAdminStore((state) => state.categories);
+  const products = useAdminStore((state) => state.products);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
 
-  if (!isOpen) return null;
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Synchronize enter and exit animation lifecycle with isOpen prop
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (isOpen) {
+      setIsRendered(true);
+      // Next tick / animation frame to guarantee CSS transition triggers from initial off-screen state
+      const raf = requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+      return () => cancelAnimationFrame(raf);
+    } else if (isRendered) {
+      // Begin exit transition
+      setIsVisible(false);
+      timer = setTimeout(() => {
+        setIsRendered(false);
+      }, 300); // matches transition duration (300ms)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isOpen, isRendered]);
+
+  // Handle ESC key to dismiss sidebar smoothly
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Prevent background scroll while sidebar menu is open using shared lock manager
+  useEffect(() => {
+    if (!isRendered) return;
+    lockBodyScroll();
+    return () => {
+      unlockBodyScroll();
+    };
+  }, [isRendered]);
+
+  // Compute dynamic real product counts for categories and subcategories
+  const categoryCounts = useMemo(() => {
+    // Only count products considered active and published
+    const activeProducts = products.filter((p: any) => {
+      if (p.isActive === false || p.isPublished === false) return false;
+      if (p.status === 'inactive' || p.status === 'draft') return false;
+      return true;
+    });
+
+    const countMap: Record<string, number> = {};
+
+    categories.forEach((cat) => {
+      const catSlug = (cat.slug || '').toLowerCase();
+      const catId = (cat.id || '').toLowerCase();
+      const catName = (cat.name || '').toLowerCase();
+
+      const count = activeProducts.filter((p) => {
+        const prodCat = (p.category || '').toLowerCase();
+        const prodCatLabel = (p.categoryLabel || '').toLowerCase();
+
+        // 1. Direct match with category slug or ID
+        if (prodCat === catSlug || prodCat === catId) return true;
+        // 2. Singular/Plural matching (e.g. necklaces vs necklace, bracelets vs bracelet)
+        if (catSlug && (prodCat === `${catSlug}s` || `${prodCat}s` === catSlug)) return true;
+        // 3. Match categoryLabel or name
+        if (prodCatLabel && (prodCatLabel === catName || prodCatLabel === catSlug)) return true;
+        if (prodCat && prodCat === catName) return true;
+        // 4. Tags matching (consistent with ShopPage filtering logic)
+        if (p.tags && Array.isArray(p.tags)) {
+          return p.tags.some((t) => {
+            const tag = t.toLowerCase();
+            return tag === catSlug || tag === catId || (catSlug && (tag === `${catSlug}s` || `${tag}s` === catSlug));
+          });
+        }
+        return false;
+      }).length;
+
+      countMap[cat.id] = count;
+      if (cat.slug) {
+        countMap[cat.slug] = count;
+      }
+    });
+
+    return countMap;
+  }, [products, categories]);
+
+  if (!isRendered) return null;
 
   // Filter top level categories (those without parentCategory)
   const topCategories = categories
@@ -59,8 +157,27 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex animate-fade-in">
-      <div className="w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto">
+    <div 
+      className={`fixed inset-0 z-50 flex justify-start transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+        isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+      }`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Sidebar Menu"
+    >
+      {/* Background Overlay with smooth fade */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ease-out motion-reduce:transition-none"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Sidebar Drawer Panel with smooth slide-in from left */}
+      <div 
+        className={`relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto z-10 transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:transform-none ${
+          isVisible ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div>
           {/* Header Banner */}
           <div className="bg-[#4A1525] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#5C1B2E]">
@@ -77,7 +194,7 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
             </div>
             <button 
               onClick={onClose} 
-              className="text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+              className="text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 active:scale-90 transition-all cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-amber-300/50"
               aria-label="Close menu"
             >
               <X size={22} />
@@ -89,7 +206,7 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
             
             <button 
               onClick={() => { setActiveTab('home'); onClose(); }}
-              className={`w-full flex items-center space-x-3 p-2.5 sm:p-3 rounded-xl transition-colors cursor-pointer ${activeTab === 'home' ? 'bg-[#FAF7F2] text-[#4A1525] font-bold' : 'hover:bg-[#FAF7F2]'}`}
+              className={`w-full flex items-center space-x-3 p-2.5 sm:p-3 rounded-xl transition-all active:scale-[0.99] cursor-pointer ${activeTab === 'home' ? 'bg-[#FAF7F2] text-[#4A1525] font-bold' : 'hover:bg-[#FAF7F2]'}`}
             >
               <Home size={18} className="text-[#4A1525]" />
               <span>Home</span>
@@ -97,7 +214,7 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
 
             <button 
               onClick={() => { setActiveTab('shop'); setSelectedCategory('all'); onClose(); }}
-              className={`w-full flex items-center space-x-3 p-2.5 sm:p-3 rounded-xl transition-colors cursor-pointer ${activeTab === 'shop' && (!selectedCategory || selectedCategory === 'all') ? 'bg-[#FAF7F2] text-[#4A1525] font-bold' : 'hover:bg-[#FAF7F2]'}`}
+              className={`w-full flex items-center space-x-3 p-2.5 sm:p-3 rounded-xl transition-all active:scale-[0.99] cursor-pointer ${activeTab === 'shop' && (!selectedCategory || selectedCategory === 'all') ? 'bg-[#FAF7F2] text-[#4A1525] font-bold' : 'hover:bg-[#FAF7F2]'}`}
             >
               <ShoppingBag size={18} className="text-[#4A1525]" />
               <span>Shop All</span>
@@ -154,7 +271,7 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
                               className={`w-full text-left px-2 py-1 text-xs rounded transition-colors flex items-center justify-between cursor-pointer ${isSubSelected ? 'text-[#4A1525] font-bold bg-amber-100/70' : 'text-slate-600 hover:text-[#4A1525] hover:bg-amber-50'}`}
                             >
                               <span className="truncate">• {sub.name}</span>
-                              <span className="text-[10px] text-slate-400">({sub.productCount || 0})</span>
+                              <span className="text-[10px] text-slate-400">({categoryCounts[sub.id] ?? categoryCounts[sub.slug] ?? 0})</span>
                             </button>
                           );
                         })}

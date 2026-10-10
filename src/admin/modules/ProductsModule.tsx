@@ -56,6 +56,9 @@ export const ProductsModule: React.FC = () => {
   // Local inputs for Color & Size tags
   const [newColorInput, setNewColorInput] = useState('');
   const [newSizeInput, setNewSizeInput] = useState('');
+  const [selectedColorTab, setSelectedColorTab] = useState('');
+  const [colorImageUrlInput, setColorImageUrlInput] = useState('');
+  const [isUploadingColorImage, setIsUploadingColorImage] = useState(false);
 
   // New Product Form State
   const [formData, setFormData] = useState<{
@@ -78,6 +81,7 @@ export const ProductsModule: React.FC = () => {
     // Variants: Color & Size
     enableColors: boolean;
     colorsList: string[];
+    colorImages: Record<string, string[]>;
     enableSizes: boolean;
     sizesList: string[];
     // SEO & Media Fields
@@ -117,6 +121,7 @@ export const ProductsModule: React.FC = () => {
     tags: 'jewelry, handcrafted, premium',
     enableColors: false,
     colorsList: [],
+    colorImages: {},
     enableSizes: false,
     sizesList: [],
     imageAlt: '',
@@ -165,6 +170,7 @@ export const ProductsModule: React.FC = () => {
       tags: 'necklaces, gold, royal',
       enableColors: false,
       colorsList: [],
+      colorImages: {},
       enableSizes: false,
       sizesList: [],
       imageAlt: '',
@@ -190,6 +196,8 @@ export const ProductsModule: React.FC = () => {
     setNewGalleryUrl('');
     setNewColorInput('');
     setNewSizeInput('');
+    setSelectedColorTab('');
+    setColorImageUrlInput('');
     setUploadError(null);
     setShowSeoSection(false);
     setIsAddingProduct(true);
@@ -240,6 +248,7 @@ export const ProductsModule: React.FC = () => {
       tags: product.tags ? product.tags.join(', ') : '',
       enableColors: hasFinishes,
       colorsList: hasFinishes ? [...(product.finishes || [])] : [],
+      colorImages: product.colorImages ? { ...product.colorImages } : {},
       enableSizes: hasSizes,
       sizesList: hasSizes ? [...(product.sizes || [])] : [],
       // Populate SEO fields with fallback preservation
@@ -264,6 +273,8 @@ export const ProductsModule: React.FC = () => {
     setNewGalleryUrl('');
     setNewColorInput('');
     setNewSizeInput('');
+    setSelectedColorTab(hasFinishes && product.finishes && product.finishes.length > 0 ? product.finishes[0] : '');
+    setColorImageUrlInput('');
     setUploadError(null);
     setShowSeoSection(Boolean(prodSeo.seoTitle || (product as any).seoTitle || product.imageAlt));
     setIsAddingProduct(false);
@@ -399,15 +410,96 @@ export const ProductsModule: React.FC = () => {
         ...prev,
         colorsList: [...prev.colorsList, target]
       }));
+      setSelectedColorTab(target);
     }
     setNewColorInput('');
   };
 
   const handleRemoveColor = (indexToRemove: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      colorsList: prev.colorsList.filter((_, idx) => idx !== indexToRemove)
-    }));
+    const colorToRemove = formData.colorsList[indexToRemove];
+    setFormData((prev) => {
+      const updatedColors = prev.colorsList.filter((_, idx) => idx !== indexToRemove);
+      const updatedColorImages = { ...prev.colorImages };
+      if (colorToRemove) {
+        delete updatedColorImages[colorToRemove];
+      }
+      return {
+        ...prev,
+        colorsList: updatedColors,
+        colorImages: updatedColorImages
+      };
+    });
+    if (selectedColorTab === colorToRemove) {
+      const remaining = formData.colorsList.filter((_, idx) => idx !== indexToRemove);
+      setSelectedColorTab(remaining[0] || '');
+    }
+  };
+
+  // Color-specific image handlers
+  const handleAddColorImageUrl = (colorName: string) => {
+    const trimmed = colorImageUrlInput.trim();
+    if (!trimmed || !colorName) return;
+    setFormData((prev) => {
+      const currentList = prev.colorImages[colorName] || [];
+      if (currentList.includes(trimmed)) return prev;
+      return {
+        ...prev,
+        colorImages: {
+          ...prev.colorImages,
+          [colorName]: [...currentList, trimmed]
+        }
+      };
+    });
+    setColorImageUrlInput('');
+  };
+
+  const handleColorImageFileUpload = async (colorName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !colorName) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Color image size exceeds 5MB limit.');
+      return;
+    }
+
+    try {
+      setIsUploadingColorImage(true);
+      setUploadError(null);
+      const uploadedUrl = await uploadImageToCloudinary(file, 'products');
+      setFormData((prev) => {
+        const currentList = prev.colorImages[colorName] || [];
+        return {
+          ...prev,
+          colorImages: {
+            ...prev.colorImages,
+            [colorName]: [...currentList, uploadedUrl]
+          }
+        };
+      });
+    } catch (err: any) {
+      console.error('Color image upload failed:', err);
+      setUploadError(err?.message || 'Failed to upload color image.');
+    } finally {
+      setIsUploadingColorImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveColorImage = (colorName: string, urlToRemove: string) => {
+    setFormData((prev) => {
+      const currentList = prev.colorImages[colorName] || [];
+      const updated = currentList.filter((u) => u !== urlToRemove);
+      const newColorImages = { ...prev.colorImages };
+      if (updated.length > 0) {
+        newColorImages[colorName] = updated;
+      } else {
+        delete newColorImages[colorName];
+      }
+      return {
+        ...prev,
+        colorImages: newColorImages
+      };
+    });
   };
 
   // Variant Helpers: Size
@@ -482,6 +574,22 @@ export const ProductsModule: React.FC = () => {
       imageSeoList
     };
 
+    // Clean up colorImages to include only active colors with non-empty image lists.
+    // If colors are disabled or all color images are removed, save {} so Firestore merge clears stale mappings.
+    const cleanedColorImages: Record<string, string[]> = {};
+    if (formData.enableColors && finalFinishes.length > 0 && formData.colorImages) {
+      finalFinishes.forEach((color) => {
+        if (Array.isArray(formData.colorImages[color])) {
+          const validUrls = formData.colorImages[color].filter(
+            (u) => typeof u === 'string' && u.trim().length > 0
+          );
+          if (validUrls.length > 0) {
+            cleanedColorImages[color] = validUrls;
+          }
+        }
+      });
+    }
+
     const productPayload = {
       name: formData.name,
       sku: formData.sku,
@@ -502,6 +610,7 @@ export const ProductsModule: React.FC = () => {
       isFeatured: formData.isFeatured,
       tags: parsedTags,
       finishes: finalFinishes,
+      colorImages: cleanedColorImages,
       sizes: finalSizes,
       seo: seoPayload,
       // Direct root fields for backward compatibility
@@ -1048,6 +1157,149 @@ export const ProductsModule: React.FC = () => {
                           <p className="text-[11px] text-amber-700 italic">Please add at least 1 color option above.</p>
                         )}
                       </div>
+
+                      {/* Color-Specific Images Assignment Panel */}
+                      {formData.colorsList.length > 0 && (
+                        <div className="pt-3 border-t border-amber-200/90 space-y-3 bg-amber-100/30 p-3 rounded-xl border">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-neutral-900 block text-xs flex items-center space-x-1.5">
+                                <ImageIcon size={14} className="text-[#4A1525]" />
+                                <span>Color-Specific Images</span>
+                              </span>
+                              <span className="text-[10px] text-neutral-500">
+                                Select a color below to assign photos. When customer selects that color in Product View, these photos will display.
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Horizontal Color Selector Tabs/Chips with photo count */}
+                          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                            {formData.colorsList.map((color) => {
+                              const isTabActive = (selectedColorTab || formData.colorsList[0]) === color;
+                              const imageCount = formData.colorImages[color]?.length || 0;
+                              return (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => setSelectedColorTab(color)}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all flex items-center space-x-1.5 cursor-pointer ${
+                                    isTabActive
+                                      ? 'bg-[#4A1525] text-white shadow-xs'
+                                      : 'bg-white border border-neutral-300 text-neutral-700 hover:border-amber-400'
+                                  }`}
+                                >
+                                  <span>{color}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                                    isTabActive ? 'bg-white/20 text-amber-200' : 'bg-neutral-100 text-neutral-500'
+                                  }`}>
+                                    {imageCount}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Image Manager for Currently Selected Color */}
+                          {(() => {
+                            const activeColor = selectedColorTab && formData.colorsList.includes(selectedColorTab)
+                              ? selectedColorTab
+                              : formData.colorsList[0];
+                            const currentImages = (activeColor && formData.colorImages[activeColor]) || [];
+
+                            return (
+                              <div className="bg-white p-3 rounded-lg border border-amber-200 space-y-2.5">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-neutral-800">
+                                    Photos for <span className="text-[#4A1525]">"{activeColor}"</span> ({currentImages.length})
+                                  </span>
+                                  {currentImages.length === 0 && (
+                                    <span className="text-[10px] text-amber-700 italic">
+                                      * No photos assigned yet (will fall back to general gallery)
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Controls: Cloudinary Upload + URL input */}
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <input
+                                    type="url"
+                                    value={colorImageUrlInput}
+                                    onChange={(e) => setColorImageUrlInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddColorImageUrl(activeColor);
+                                      }
+                                    }}
+                                    placeholder={`Paste image URL for ${activeColor}...`}
+                                    className="flex-1 px-2.5 py-1.5 border border-neutral-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#4A1525]"
+                                  />
+                                  <div className="flex items-center space-x-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddColorImageUrl(activeColor)}
+                                      className="px-3 py-1.5 bg-neutral-800 hover:bg-black text-white text-xs font-semibold rounded-lg transition cursor-pointer"
+                                    >
+                                      Add URL
+                                    </button>
+
+                                    {/* Cloudinary Direct File Upload Button */}
+                                    <label className={`px-3 py-1.5 bg-[#4A1525] hover:bg-[#6B1228] text-amber-200 text-xs font-semibold rounded-lg transition flex items-center space-x-1 cursor-pointer ${
+                                      isUploadingColorImage ? 'opacity-60 cursor-not-allowed' : ''
+                                    }`}>
+                                      {isUploadingColorImage ? (
+                                        <span>Uploading...</span>
+                                      ) : (
+                                        <>
+                                          <Upload size={12} />
+                                          <span>Upload File</span>
+                                        </>
+                                      )}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={isUploadingColorImage}
+                                        onChange={(e) => handleColorImageFileUpload(activeColor, e)}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {/* Thumbnails Grid for this Color */}
+                                {currentImages.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 pt-1 max-h-36 overflow-y-auto">
+                                    {currentImages.map((imgUrl, imgIdx) => (
+                                      <div
+                                        key={imgIdx}
+                                        className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50 shadow-2xs"
+                                      >
+                                        <img
+                                          src={imgUrl}
+                                          alt={`${activeColor} photo ${imgIdx + 1}`}
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveColorImage(activeColor, imgUrl)}
+                                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600/90 hover:bg-red-700 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xs cursor-pointer"
+                                          title="Remove photo"
+                                        >
+                                          <X size={11} />
+                                        </button>
+                                        <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] text-center font-mono py-0.5 truncate">
+                                          #{imgIdx + 1}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-[11px] text-neutral-400 italic pt-1">

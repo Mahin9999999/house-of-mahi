@@ -140,6 +140,7 @@ export function App() {
     coupons,
     addOrder, 
     initializeFirestoreSync,
+    isSyncing,
     seoConfig,
     pagesSeo,
     homepageSections
@@ -1238,7 +1239,7 @@ export function App() {
       {/* MAIN VIEW CONTENT AREA */}
       <main className="flex-1 pb-16 lg:pb-0">
         {activeTab === 'home' && (
-          <div>
+          <div className="animate-fade-in">
             {/* 1. HERO SLIDER (Uses canonical Firestore heroBanners via HeroSlider component) */}
             <HeroSlider 
               onShopClick={() => {
@@ -1352,7 +1353,7 @@ export function App() {
                   displayedProducts = products.slice(0, limit);
                 }
 
-                if (displayedProducts.length === 0) return null;
+                if (displayedProducts.length === 0 && !isSyncing) return null;
 
                 const gridColsClass = settings.columnsDesktop === 2
                   ? 'lg:grid-cols-2'
@@ -1367,7 +1368,7 @@ export function App() {
                 const mobileColsClass = settings.columnsMobile === 1 ? 'grid-cols-1' : 'grid-cols-2';
 
                 return (
-                  <section key={sec.id} className="py-10 bg-[#FAF7F2] border-t border-b border-[#EFE8DE]">
+                  <section key={sec.id} className="py-10 bg-[#FAF7F2] border-t border-b border-[#EFE8DE] animate-fade-in">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
                         <div>
@@ -1393,17 +1394,35 @@ export function App() {
                       </div>
 
                       <div className={`grid ${mobileColsClass} sm:grid-cols-3 ${gridColsClass} gap-3 sm:gap-6`}>
-                        {displayedProducts.map(product => (
-                          <ProductCard
-                            key={`${sec.id}-${product.id}`}
-                            product={product}
-                            isWishlisted={wishlist.includes(product.id)}
-                            onToggleWishlist={toggleWishlist}
-                            onAddToCart={addToCart}
-                            onBuyNow={buyNow}
-                            onQuickView={setQuickViewProduct}
-                          />
-                        ))}
+                        {displayedProducts.length > 0 ? (
+                          displayedProducts.map(product => (
+                            <ProductCard
+                              key={`${sec.id}-${product.id}`}
+                              product={product}
+                              isWishlisted={wishlist.includes(product.id)}
+                              onToggleWishlist={toggleWishlist}
+                              onAddToCart={addToCart}
+                              onBuyNow={buyNow}
+                              onQuickView={setQuickViewProduct}
+                            />
+                          ))
+                        ) : (
+                          Array.from({ length: Math.min(limit, 4) }).map((_, idx) => (
+                            <div key={`skel-feat-${idx}`} className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs flex flex-col justify-between">
+                              <div>
+                                <div className="aspect-square bg-stone-200 skeleton-shimmer" />
+                                <div className="p-3 space-y-2">
+                                  <div className="h-3 bg-stone-200 rounded-sm w-3/4 skeleton-shimmer" />
+                                  <div className="h-4 bg-stone-200 rounded-sm w-1/3 skeleton-shimmer" />
+                                </div>
+                              </div>
+                              <div className="p-2 pt-0 space-y-1.5">
+                                <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                                <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </section>
@@ -1426,10 +1445,10 @@ export function App() {
                   }
                 }
 
-                if (displayedProducts.length === 0) return null;
+                if (displayedProducts.length === 0 && !isSyncing) return null;
 
                 return (
-                  <section key={sec.id} className="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+                  <section key={sec.id} className="py-12 px-4 sm:px-6 max-w-7xl mx-auto animate-fade-in">
                     <div className="border-b border-[#EFE8DE] pb-3 mb-6 flex items-center justify-between">
                       <div>
                         {sec.subtitle && (
@@ -1450,17 +1469,35 @@ export function App() {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                      {displayedProducts.map(product => (
-                        <ProductCard
-                          key={`${sec.id}-${product.id}`}
-                          product={product}
-                          isWishlisted={wishlist.includes(product.id)}
-                          onToggleWishlist={toggleWishlist}
-                          onAddToCart={addToCart}
-                          onBuyNow={buyNow}
-                          onQuickView={setQuickViewProduct}
-                        />
-                      ))}
+                      {displayedProducts.length > 0 ? (
+                        displayedProducts.map(product => (
+                          <ProductCard
+                            key={`${sec.id}-${product.id}`}
+                            product={product}
+                            isWishlisted={wishlist.includes(product.id)}
+                            onToggleWishlist={toggleWishlist}
+                            onAddToCart={addToCart}
+                            onBuyNow={buyNow}
+                            onQuickView={setQuickViewProduct}
+                          />
+                        ))
+                      ) : (
+                        Array.from({ length: Math.min(limit, 4) }).map((_, idx) => (
+                          <div key={`skel-best-${idx}`} className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs flex flex-col justify-between">
+                            <div>
+                              <div className="aspect-square bg-stone-200 skeleton-shimmer" />
+                              <div className="p-3 space-y-2">
+                                <div className="h-3 bg-stone-200 rounded-sm w-3/4 skeleton-shimmer" />
+                                <div className="h-4 bg-stone-200 rounded-sm w-1/3 skeleton-shimmer" />
+                              </div>
+                            </div>
+                            <div className="p-2 pt-0 space-y-1.5">
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </section>
                 );
@@ -1482,10 +1519,10 @@ export function App() {
                   }
                 }
 
-                if (displayedProducts.length === 0) return null;
+                if (displayedProducts.length === 0 && !isSyncing) return null;
 
                 return (
-                  <section key={sec.id} className="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+                  <section key={sec.id} className="py-12 px-4 sm:px-6 max-w-7xl mx-auto animate-fade-in">
                     <div className="border-b border-[#EFE8DE] pb-3 mb-6 flex items-center justify-between">
                       <div>
                         {sec.subtitle && (
@@ -1506,17 +1543,35 @@ export function App() {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                      {displayedProducts.map(product => (
-                        <ProductCard
-                          key={`${sec.id}-${product.id}`}
-                          product={product}
-                          isWishlisted={wishlist.includes(product.id)}
-                          onToggleWishlist={toggleWishlist}
-                          onAddToCart={addToCart}
-                          onBuyNow={buyNow}
-                          onQuickView={setQuickViewProduct}
-                        />
-                      ))}
+                      {displayedProducts.length > 0 ? (
+                        displayedProducts.map(product => (
+                          <ProductCard
+                            key={`${sec.id}-${product.id}`}
+                            product={product}
+                            isWishlisted={wishlist.includes(product.id)}
+                            onToggleWishlist={toggleWishlist}
+                            onAddToCart={addToCart}
+                            onBuyNow={buyNow}
+                            onQuickView={setQuickViewProduct}
+                          />
+                        ))
+                      ) : (
+                        Array.from({ length: Math.min(limit, 4) }).map((_, idx) => (
+                          <div key={`skel-new-${idx}`} className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs flex flex-col justify-between">
+                            <div>
+                              <div className="aspect-square bg-stone-200 skeleton-shimmer" />
+                              <div className="p-3 space-y-2">
+                                <div className="h-3 bg-stone-200 rounded-sm w-3/4 skeleton-shimmer" />
+                                <div className="h-4 bg-stone-200 rounded-sm w-1/3 skeleton-shimmer" />
+                              </div>
+                            </div>
+                            <div className="p-2 pt-0 space-y-1.5">
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </section>
                 );
@@ -1538,10 +1593,10 @@ export function App() {
                   }
                 }
 
-                if (displayedProducts.length === 0) return null;
+                if (displayedProducts.length === 0 && !isSyncing) return null;
 
                 return (
-                  <section key={sec.id} className="py-12 bg-gradient-to-r from-[#4A1525] to-[#2C0B15] text-white my-8">
+                  <section key={sec.id} className="py-12 bg-gradient-to-r from-[#4A1525] to-[#2C0B15] text-white my-8 animate-fade-in">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                         <div>
@@ -1570,17 +1625,35 @@ export function App() {
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                        {displayedProducts.map(product => (
-                          <ProductCard
-                            key={`${sec.id}-${product.id}`}
-                            product={product}
-                            isWishlisted={wishlist.includes(product.id)}
-                            onToggleWishlist={toggleWishlist}
-                            onAddToCart={addToCart}
-                            onBuyNow={buyNow}
-                            onQuickView={setQuickViewProduct}
-                          />
-                        ))}
+                        {displayedProducts.length > 0 ? (
+                          displayedProducts.map(product => (
+                            <ProductCard
+                              key={`${sec.id}-${product.id}`}
+                              product={product}
+                              isWishlisted={wishlist.includes(product.id)}
+                              onToggleWishlist={toggleWishlist}
+                              onAddToCart={addToCart}
+                              onBuyNow={buyNow}
+                              onQuickView={setQuickViewProduct}
+                            />
+                          ))
+                        ) : (
+                          Array.from({ length: Math.min(limit, 4) }).map((_, idx) => (
+                            <div key={`skel-flash-${idx}`} className="bg-white/10 rounded-xl border border-amber-300/20 overflow-hidden shadow-xs flex flex-col justify-between">
+                              <div>
+                                <div className="aspect-square bg-white/10 skeleton-shimmer" />
+                                <div className="p-3 space-y-2">
+                                  <div className="h-3 bg-white/15 rounded-sm w-3/4 skeleton-shimmer" />
+                                  <div className="h-4 bg-white/15 rounded-sm w-1/3 skeleton-shimmer" />
+                                </div>
+                              </div>
+                              <div className="p-2 pt-0 space-y-1.5">
+                                <div className="h-7 bg-white/20 rounded-lg w-full skeleton-shimmer" />
+                                <div className="h-7 bg-white/20 rounded-lg w-full skeleton-shimmer" />
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </section>
@@ -1809,10 +1882,10 @@ export function App() {
                   displayedProducts = products.slice(0, limit);
                 }
 
-                if (displayedProducts.length === 0) return null;
+                if (displayedProducts.length === 0 && !isSyncing) return null;
 
                 return (
-                  <section key={sec.id} className="py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+                  <section key={sec.id} className="py-10 px-4 sm:px-6 max-w-7xl mx-auto animate-fade-in">
                     <div className="flex items-end justify-between mb-6">
                       <div>
                         {sec.subtitle && (
@@ -1832,17 +1905,35 @@ export function App() {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                      {displayedProducts.map(product => (
-                        <ProductCard
-                          key={`${sec.id}-${product.id}`}
-                          product={product}
-                          isWishlisted={wishlist.includes(product.id)}
-                          onToggleWishlist={toggleWishlist}
-                          onAddToCart={addToCart}
-                          onBuyNow={buyNow}
-                          onQuickView={setQuickViewProduct}
-                        />
-                      ))}
+                      {displayedProducts.length > 0 ? (
+                        displayedProducts.map(product => (
+                          <ProductCard
+                            key={`${sec.id}-${product.id}`}
+                            product={product}
+                            isWishlisted={wishlist.includes(product.id)}
+                            onToggleWishlist={toggleWishlist}
+                            onAddToCart={addToCart}
+                            onBuyNow={buyNow}
+                            onQuickView={setQuickViewProduct}
+                          />
+                        ))
+                      ) : (
+                        Array.from({ length: Math.min(limit, 4) }).map((_, idx) => (
+                          <div key={`skel-cust-${idx}`} className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs flex flex-col justify-between">
+                            <div>
+                              <div className="aspect-square bg-stone-200 skeleton-shimmer" />
+                              <div className="p-3 space-y-2">
+                                <div className="h-3 bg-stone-200 rounded-sm w-3/4 skeleton-shimmer" />
+                                <div className="h-4 bg-stone-200 rounded-sm w-1/3 skeleton-shimmer" />
+                              </div>
+                            </div>
+                            <div className="p-2 pt-0 space-y-1.5">
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                              <div className="h-7 bg-stone-200 rounded-lg w-full skeleton-shimmer" />
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </section>
                 );

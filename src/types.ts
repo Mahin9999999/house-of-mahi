@@ -102,6 +102,7 @@ export interface Product {
   galleryImages?: string[];
   galleryImagesAlt?: Record<string, string>; // Map of image URL -> ALT text
   finishes?: string[];
+  colorImages?: Record<string, string[]>; // Map of color/finish name -> array of specific image URLs
   sizes?: string[];
   description: string;
   shortDescription?: string;
