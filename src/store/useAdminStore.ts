@@ -72,6 +72,8 @@ import {
 } from '../firebase/firestoreService';
 import { trackingService } from '../services/trackingService';
 import { INITIAL_COURIER_CONFIGS, executeAutoCourierBooking } from '../services/courierService';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 // Storage cache key for resilient homepage sections synchronization
 const HOMEPAGE_SECTIONS_STORAGE_KEY = 'hom_homepage_sections_cache_v2';
@@ -312,43 +314,85 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       );
       unsubscribers.push(unsubProducts);
 
-      // 2. Subscribe to Orders
-      const unsubOrders = subscribeToOrders(
-        (firestoreOrders) => {
-          if (firestoreOrders && firestoreOrders.length > 0) {
-            const normalizedOrders = firestoreOrders.map(ord => {
-              let normStatus: OrderStatus = 'Pending';
-              const raw = (ord.status as string || '').toLowerCase().trim();
-              
-              if (raw === 'pending confirmation' || raw === 'pending_confirmation' || raw === 'pending') {
-                normStatus = 'Pending';
-              } else if (raw === 'confirmed') {
-                normStatus = 'Confirmed';
-              } else if (raw === 'processing' || raw === 'packed') {
-                normStatus = 'Processing';
-              } else if (raw === 'shipped' || raw === 'shipping' || raw === 'courier') {
-                normStatus = 'Shipped';
-              } else if (raw === 'delivered' || raw === 'completed') {
-                normStatus = 'Delivered';
-              } else if (raw === 'cancelled' || raw === 'canceled') {
-                normStatus = 'Cancelled';
-              } else if (raw === 'refunded' || raw === 'refund') {
-                normStatus = 'Refunded';
-              } else {
-                normStatus = 'Pending';
-              }
+      // 2. Subscribe to Orders with dynamic normalization and authentication timing resilience
+      let unsubOrders: (() => void) | null = null;
 
-              return {
-                ...ord,
-                status: normStatus
-              };
-            });
-            set({ orders: normalizedOrders });
+      const startOrdersSubscription = () => {
+        if (unsubOrders) {
+          try {
+            unsubOrders();
+          } catch (e) {
+            // ignore
           }
-        },
-        (err) => console.warn('Orders sync warning:', err.message)
-      );
-      unsubscribers.push(unsubOrders);
+          unsubOrders = null;
+        }
+
+        try {
+          unsubOrders = subscribeToOrders(
+            (firestoreOrders) => {
+              if (Array.isArray(firestoreOrders)) {
+                const normalizedOrders = firestoreOrders.map((ord) => {
+                  let normStatus: OrderStatus = 'Pending';
+                  const raw = (ord.status as string || '').toLowerCase().trim();
+
+                  if (raw === 'pending confirmation' || raw === 'pending_confirmation' || raw === 'pending') {
+                    normStatus = 'Pending';
+                  } else if (raw === 'confirmed') {
+                    normStatus = 'Confirmed';
+                  } else if (raw === 'processing' || raw === 'packed') {
+                    normStatus = 'Processing';
+                  } else if (raw === 'shipped' || raw === 'shipping' || raw === 'courier') {
+                    normStatus = 'Shipped';
+                  } else if (raw === 'delivered' || raw === 'completed') {
+                    normStatus = 'Delivered';
+                  } else if (raw === 'cancelled' || raw === 'canceled') {
+                    normStatus = 'Cancelled';
+                  } else if (raw === 'refunded' || raw === 'refund') {
+                    normStatus = 'Refunded';
+                  } else {
+                    normStatus = 'Pending';
+                  }
+
+                  return {
+                    ...ord,
+                    status: normStatus
+                  };
+                });
+                set({ orders: normalizedOrders });
+              }
+            },
+            (err) => console.warn('Orders sync warning (may require admin authentication):', err.message)
+          );
+        } catch (subErr: any) {
+          console.warn('Orders subscription initiation error:', subErr?.message);
+        }
+      };
+
+      // Initial subscription attempt on mount
+      startOrdersSubscription();
+
+      // Auth timing synchronization: When auth state changes (e.g., admin signs in or session restores),
+      // re-trigger orders subscription so that authenticated admin gets live orders without manual refresh.
+      try {
+        const unsubAuth = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            startOrdersSubscription();
+          }
+        });
+        unsubscribers.push(unsubAuth);
+      } catch (authListenerErr) {
+        console.warn('Auth listener for orders sync not attached:', authListenerErr);
+      }
+
+      unsubscribers.push(() => {
+        if (unsubOrders) {
+          try {
+            unsubOrders();
+          } catch (e) {
+            // ignore
+          }
+        }
+      });
 
       // 3. Subscribe to Categories
       const unsubCats = subscribeToCategories(
@@ -855,15 +899,15 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
   deleteOrder: async (orderId: string) => {
     try {
       const ok = await deleteOrderFromFirestore(orderId);
-      if (ok) {
-        set((state) => ({
-          orders: state.orders.filter((o) => o.id !== orderId && o.orderNumber !== orderId)
-        }));
-        return true;
-      }
-      return false;
+      set((state) => ({
+        orders: state.orders.filter((o) => o.id !== orderId && o.orderNumber !== orderId)
+      }));
+      return ok;
     } catch (error) {
       console.error('Failed to delete order:', error);
+      set((state) => ({
+        orders: state.orders.filter((o) => o.id !== orderId && o.orderNumber !== orderId)
+      }));
       return false;
     }
   },
@@ -888,6 +932,10 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       };
     } catch (error) {
       console.error('Failed to bulk delete orders:', error);
+      const orderIdSet = new Set(orderIds);
+      set((state) => ({
+        orders: state.orders.filter((o) => !orderIdSet.has(o.id) && !orderIdSet.has(o.orderNumber))
+      }));
       return { success: false, deletedCount: 0, failedCount: orderIds.length };
     }
   },

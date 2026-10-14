@@ -418,62 +418,7 @@ export const INITIAL_REVIEWS: Review[] = [
   }
 ];
 
-export const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'HOM-984210',
-    orderNumber: 'HOM-984210',
-    date: 'August 08, 2026',
-    items: [
-      { product: PRODUCTS[0], quantity: 1, selectedFinish: 'Gold' },
-      { product: PRODUCTS[1], quantity: 1 }
-    ],
-    subtotal: 1130,
-    shippingCharge: 80,
-    discount: 0,
-    total: 1210,
-    status: 'Shipped',
-    paymentMethod: 'cod',
-    paymentStatus: 'unpaid',
-    customer: {
-      name: 'Nusrat Jahan',
-      phone: '01711-882233',
-      email: 'nusrat.jahan@gmail.com',
-      address: 'House 42, Road 11, Banani',
-      district: 'Dhaka',
-      thana: 'Banani',
-      note: 'Deliver during afternoon please'
-    },
-    trackingNumber: 'STEAD-984210-BD',
-    utmSource: 'facebook',
-    utmCampaign: 'eid_jewel_sale'
-  },
-  {
-    id: 'HOM-984211',
-    orderNumber: 'HOM-984211',
-    date: 'August 10, 2026',
-    items: [
-      { product: PRODUCTS[3], quantity: 1 }
-    ],
-    subtotal: 1250,
-    shippingCharge: 150,
-    discount: 100,
-    total: 1300,
-    status: 'Processing',
-    paymentMethod: 'bkash',
-    paymentStatus: 'paid',
-    customer: {
-      name: 'Dr. Sharmin Akter',
-      phone: '01822-990011',
-      email: 'sharmin.doc@yahoo.com',
-      address: 'Near Government College, Station Road',
-      district: 'Chittagong',
-      thana: 'Kotwali'
-    },
-    trackingNumber: 'STEAD-984211-BD',
-    utmSource: 'instagram',
-    utmCampaign: 'bridal_ad'
-  }
-];
+export const INITIAL_ORDERS: Order[] = [];
 
 export const MARKETING_PIXELS_CONFIG: MarketingPixelsConfig = {
   // 1. Meta / Facebook Pixel
