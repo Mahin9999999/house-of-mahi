@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { courierRouter } from './server/routes/courier';
 import paymentRouter from './server/routes/payment';
 import { trackingRouter } from './server/routes/tracking';
+import adminStaffRouter from './server/routes/adminStaff.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,9 @@ async function startServer() {
 
   // Tracking API Routes (Meta CAPI & GA4 Server Tracking)
   app.use('/api/tracking', trackingRouter);
+
+  // Staff Management API Routes
+  app.use('/api/admin/staff', adminStaffRouter);
 
   // ==========================================
   // PRODUCTION SEO DIRECTIVES & CRAWLER ROUTES

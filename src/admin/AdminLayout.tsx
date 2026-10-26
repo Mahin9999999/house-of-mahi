@@ -39,7 +39,8 @@ export type AdminTab =
   | 'analytics' 
   | 'marketing' 
   | 'seo' 
-  | 'settings';
+  | 'settings'
+  | 'staff';
 
 interface AdminLayoutProps {
   activeTab: AdminTab;
@@ -55,13 +56,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   onExitAdmin
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { currentUser, userProfile, logout } = useAuth();
+  const { currentUser, userProfile, staffProfile, staffRole, isOwner, logout } = useAuth();
 
-  const navItems: { id: AdminTab; label: string; icon: React.FC<any>; badge?: string }[] = [
+  const allNavItems: { id: AdminTab; label: string; icon: React.FC<any>; badge?: string; minRole?: 'owner' | 'editor' }[] = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
     { id: 'orders', label: 'Order Processing', icon: ShoppingBag },
-    { id: 'couriers', label: 'Courier Dispatch', icon: Truck },
-    { id: 'payments', label: 'Payment Gateways & Trx', icon: CreditCard },
+    { id: 'couriers', label: 'Courier Dispatch', icon: Truck, minRole: 'editor' },
+    { id: 'payments', label: 'Payment Gateways & Trx', icon: CreditCard, minRole: 'owner' },
     { id: 'products', label: 'Product Catalog', icon: Package },
     { id: 'categories', label: 'Category Hierarchy', icon: FolderTree },
     { id: 'banners', label: 'Hero & Promo Banners', icon: ImageIcon },
@@ -72,12 +73,51 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { id: 'analytics', label: 'Demand & Analytics', icon: TrendingUp },
     { id: 'marketing', label: 'Pixel & Marketing', icon: Share2 },
     { id: 'seo', label: 'SEO Optimization', icon: Globe },
-    { id: 'settings', label: 'Store Settings', icon: Settings }
+    { id: 'settings', label: 'Store Settings', icon: Settings, minRole: 'owner' },
+    { id: 'staff', label: 'Staff & Permissions', icon: ShieldCheck, minRole: 'owner' }
   ];
+
+  // Filter navigation items by role
+  const navItems = allNavItems.filter((item) => {
+    if (!item.minRole) return true;
+    if (isOwner) return true;
+    if (item.minRole === 'owner') return false;
+    if (item.minRole === 'editor') return staffRole === 'editor' || staffRole === 'full_access';
+    return true;
+  });
 
   const handleTabClick = (tab: AdminTab) => {
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
+  };
+
+  const getRoleBadge = () => {
+    if (isOwner || staffRole === 'owner') {
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-400 border border-amber-800/50 text-[9px] font-semibold tracking-wide uppercase">
+          Owner
+        </span>
+      );
+    }
+    if (staffRole === 'full_access') {
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 text-[9px] font-semibold tracking-wide uppercase">
+          Full Access
+        </span>
+      );
+    }
+    if (staffRole === 'editor') {
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-400 border border-blue-800/50 text-[9px] font-semibold tracking-wide uppercase">
+          Editor
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-400 border border-purple-800/50 text-[9px] font-semibold tracking-wide uppercase">
+        Viewer
+      </span>
+    );
   };
 
   return (
@@ -102,40 +142,51 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </button>
       </div>
 
-      {/* Desktop & Mobile Sidebar */}
+      {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-stone-950 text-stone-300 border-r border-stone-800/80 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 md:static ${
-          isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`fixed md:sticky top-0 left-0 z-50 h-screen w-72 bg-stone-950 text-stone-200 border-r border-stone-800 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Brand Header */}
-        <div className="p-6 border-b border-stone-800/60 hidden md:flex items-center justify-between">
+        {/* Brand Banner */}
+        <div className="p-6 border-b border-stone-800/80 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#800020] to-[#5C0017] text-white flex items-center justify-center font-serif font-bold text-lg shadow-inner ring-1 ring-white/10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#800020] to-[#500014] text-white flex items-center justify-center font-serif font-bold text-lg tracking-wider shadow-inner ring-1 ring-white/10">
               M
             </div>
             <div>
-              <h1 className="font-serif font-bold tracking-wider text-white text-base leading-tight">HOUSE OF MAHI</h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-stone-400">Enterprise Admin</span>
-              </div>
+              <h1 className="font-serif font-bold tracking-wide text-white text-base leading-tight">HOUSE OF MAHI</h1>
+              <span className="text-[10px] text-stone-400 uppercase tracking-widest font-mono font-medium block">
+                Store Operations
+              </span>
             </div>
           </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden text-stone-400 hover:text-white p-1 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* User Identity Pill */}
-        <div className="px-5 py-4 border-b border-stone-800/40 bg-stone-900/40 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center font-semibold text-xs shrink-0">
-            {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : currentUser?.email ? currentUser.email.charAt(0).toUpperCase() : 'A'}
+        {/* User Identity / Session Card */}
+        <div className="mx-3 my-3 p-3 rounded-xl bg-stone-900/90 border border-stone-800/70 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-stone-800 border border-stone-700/60 flex items-center justify-center text-xs font-bold text-stone-200">
+            {staffProfile?.name
+              ? staffProfile.name.charAt(0).toUpperCase()
+              : userProfile?.displayName
+              ? userProfile.displayName.charAt(0).toUpperCase()
+              : currentUser?.email
+              ? currentUser.email.charAt(0).toUpperCase()
+              : 'A'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-white truncate">{userProfile?.name || 'Administrator'}</p>
+            <p className="text-xs font-semibold text-white truncate">
+              {staffProfile?.name || userProfile?.displayName || 'Administrator'}
+            </p>
             <p className="text-[10px] text-stone-400 font-mono truncate">{currentUser?.email || 'admin@houseofmahi.com'}</p>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 text-[9px] font-semibold tracking-wide uppercase">
-            Root
-          </span>
+          {getRoleBadge()}
         </div>
 
         {/* Navigation Item List */}
@@ -199,35 +250,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
         />
       )}
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-        {/* Top Operational Bar */}
-        <header className="bg-white border-b border-stone-200/80 px-6 py-4 hidden md:flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-serif font-bold text-stone-900 capitalize">
-              {navItems.find(i => i.id === activeTab)?.label || activeTab}
-            </h2>
-            <span className="h-4 w-px bg-stone-200"></span>
-            <span className="text-xs text-stone-500 font-medium">House of Mahi Operations & Control</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>TLS / AES-256 Secured</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Tab Content Container */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
           {children}
         </div>
       </main>
     </div>
   );
 };
+
+export default AdminLayout;

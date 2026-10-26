@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { requireOwner } from '../middleware/auth.ts';
 import { BkashAdapter } from '../payment/adapters/bkash';
 import { NagadAdapter } from '../payment/adapters/nagad';
 import { CardGatewayAdapter } from '../payment/adapters/card';
@@ -80,7 +81,7 @@ router.get('/config', (req: Request, res: Response) => {
  * POST /api/payment/admin/configure-gateway
  * Unified Admin Endpoint to securely save and encrypt gateway credentials
  */
-router.post('/admin/configure-gateway', (req: Request, res: Response) => {
+router.post('/admin/configure-gateway', requireOwner, (req: Request, res: Response) => {
   try {
     const { gatewayId, credentials = {}, isSandbox, isEnabled, adminId, adminEmail } = req.body;
     const gId = (gatewayId || '').toLowerCase();
@@ -145,7 +146,7 @@ router.post('/admin/configure-gateway', (req: Request, res: Response) => {
  * POST /api/payment/config/:gateway
  * Admin Panel endpoint to save and encrypt merchant credentials securely
  */
-router.post('/config/:gateway', (req: Request, res: Response) => {
+router.post('/config/:gateway', requireOwner, (req: Request, res: Response) => {
   try {
     const { gateway } = req.params;
     const body = req.body;
@@ -216,7 +217,7 @@ router.post('/config/:gateway', (req: Request, res: Response) => {
  * POST /api/payment/config/:gateway/toggle
  * Toggle enabled / disabled or sandbox / live mode
  */
-router.post('/config/:gateway/toggle', (req: Request, res: Response) => {
+router.post('/config/:gateway/toggle', requireOwner, (req: Request, res: Response) => {
   try {
     const { gateway } = req.params as { gateway: PaymentGatewayType };
     const { isEnabled, isSandbox, adminId, adminEmail } = req.body;
@@ -243,7 +244,7 @@ router.post('/config/:gateway/toggle', (req: Request, res: Response) => {
  * POST /api/payment/gateways/toggle
  * Toggle gateway state from unified service caller
  */
-router.post('/gateways/toggle', (req: Request, res: Response) => {
+router.post('/gateways/toggle', requireOwner, (req: Request, res: Response) => {
   try {
     const { gatewayId, isEnabled, isSandbox } = req.body;
     const rawId = (gatewayId || '').toLowerCase();

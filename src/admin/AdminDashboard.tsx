@@ -24,6 +24,7 @@ import { SeoModule } from './modules/SeoModule';
 import { SettingsModule } from './modules/SettingsModule';
 import { CourierModule } from './modules/CourierModule';
 import { PaymentGatewaysModule } from './modules/PaymentGatewaysModule';
+import { StaffManagementModule } from './modules/StaffManagementModule';
 
 interface AdminDashboardProps {
   onExitAdmin: () => void;
@@ -154,6 +155,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onExitAdmin }) =
 
       {activeTab === 'settings' && (
         <SettingsModule />
+      )}
+
+      {activeTab === 'staff' && (
+        <StaffManagementModule />
       )}
     </AdminLayout>
   );

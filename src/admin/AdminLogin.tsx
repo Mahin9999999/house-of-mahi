@@ -28,7 +28,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
       if (res.success) {
         onSuccess();
       } else {
-        setError(res.message || 'Access Denied: Only the authorized master administrator Gmail account is permitted.');
+        setError(res.message || 'Access Denied: This Google account is not authorized as staff or administrator.');
       }
     } catch (err: any) {
       console.error('Admin Google Login Error:', err);
@@ -89,7 +89,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
               House of Mahi Portal
             </h1>
             <p className="text-xs text-amber-200/60 mt-1">
-              Authorized Administrator Access Only
+              Authorized Administrator & Staff Access Only
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
                       d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                     />
                   </svg>
-                  <span>Sign In with Authorized Admin Google Account</span>
+                  <span>Sign In with Google (Owner & Staff)</span>
                 </>
               )}
             </button>

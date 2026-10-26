@@ -23,11 +23,11 @@ export const AdminGuard: React.FC<AdminGuardProps> = ({ children, onBackToStore 
     );
   }
 
-  // 2. Strict Check: Must be authenticated AND have the exact Authorized Admin UID
-  const isMasterAdmin = currentUser && currentUser.uid === AUTHORIZED_ADMIN_UID && isAdmin;
+  // 2. Dynamic Authorization Check: Must be authenticated and verified as Owner or Active Staff
+  const isAuthorized = currentUser && isAdmin;
 
-  // 3. If not authenticated or UID does not match master admin UID, show Admin Login
-  if (!isMasterAdmin) {
+  // 3. If not authorized, show Admin Login
+  if (!isAuthorized) {
     return (
       <AdminLogin 
         onSuccess={() => {

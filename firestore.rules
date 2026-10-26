@@ -2,142 +2,203 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for secure authentication & authorization
+    // ==========================================
+    // HELPER FUNCTIONS FOR AUTH & ROLE VALIDATION
+    // ==========================================
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
+    function isUser(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // STRICT ADMIN AUTHORIZATION:
-    // Authorized master administrator UID, verified admin emails, or users with admin/superadmin role.
-    function isAuthorizedAdmin() {
+    // STRICT PERMANENT OWNER VALIDATION (Immutable & Protected)
+    function isOwner() {
       return isAuthenticated() && (
         request.auth.uid == 'nJqbz63bzIXRiycPC5JYA13pVOi1' ||
         (request.auth.token.email != null && (
           request.auth.token.email == 'mahincollege1@gmail.com' ||
           request.auth.token.email == 'admin@houseofmahi.com' ||
           request.auth.token.email == 'houseofmahibd@gmail.com'
-        )) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
         ))
       );
     }
 
+    // ACTIVE STAFF VALIDATION (Owner, Full Access, Editor, Viewer)
+    function isStaffActive() {
+      return isAuthenticated() && (
+        isOwner() ||
+        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'active')
+      );
+    }
+
+    // OPERATIONAL STAFF VALIDATION (Owner, Full Access, Editor - Can modify store data)
+    function isStaffEditorOrFull() {
+      return isStaffActive() && (
+        isOwner() ||
+        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+         (get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role == 'editor' ||
+          get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role == 'full_access'))
+      );
+    }
+
+    // Backwards compatibility alias for existing admin checks
+    function isAuthorizedAdmin() {
+      return isStaffActive();
+    }
+
+    // SAFE CUSTOMER CHECKOUT VALIDATION (Guards against schema tampering & fake delivered orders)
+    function isValidOrderCreate() {
+      return request.resource.data.keys().hasAll(['items', 'customer', 'total', 'status']) &&
+             request.resource.data.items is list &&
+             request.resource.data.items.size() > 0 &&
+             request.resource.data.customer is map &&
+             request.resource.data.customer.keys().hasAll(['name', 'phone', 'address']) &&
+             request.resource.data.customer.phone is string &&
+             request.resource.data.customer.phone.size() >= 10 &&
+             request.resource.data.total is number &&
+             request.resource.data.total >= 0 &&
+             request.resource.data.status in ['Pending', 'pending', 'Processing', 'processing'];
+    }
+
+    // ==========================================
+    // 0. STAFF & PERMISSIONS REGISTRY
+    // ==========================================
+    match /admin_users/{staffId} {
+      // Staff members can read their own profile, Owner can read all
+      allow read: if isAuthenticated() && (
+        isOwner() ||
+        request.auth.uid == staffId ||
+        (resource != null && resource.data.email == request.auth.token.email)
+      );
+
+      // Only Permanent Owner can authorize new staff
+      allow create: if isOwner() && (
+        request.resource.data.role in ['viewer', 'editor', 'full_access'] &&
+        request.resource.data.isOwner == false
+      );
+
+      // Updates strictly protect Permanent Owner from demotion or suspension
+      allow update: if isOwner() && (
+        // Case 1: Owner updating own profile - cannot change role from owner or suspend
+        (staffId == 'nJqbz63bzIXRiycPC5JYA13pVOi1' &&
+         request.resource.data.role == 'owner' &&
+         request.resource.data.status == 'active' &&
+         request.resource.data.isOwner == true) ||
+        // Case 2: Owner managing staff - cannot assign owner role to any other account
+        (staffId != 'nJqbz63bzIXRiycPC5JYA13pVOi1' &&
+         request.resource.data.role in ['viewer', 'editor', 'full_access'] &&
+         request.resource.data.isOwner == false)
+      );
+
+      // Deletions: Permanent Owner record can NEVER be deleted
+      allow delete: if isOwner() && staffId != 'nJqbz63bzIXRiycPC5JYA13pVOi1';
+    }
+
+    // ==========================================
     // 1. PRODUCTS COLLECTION
-    // Public visitors & customers can read products.
-    // ONLY the authorized Admin UID (nJqbz63bzIXRiycPC5JYA13pVOi1) can create, edit, or delete.
+    // ==========================================
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
+    // ==========================================
     // 2. CATEGORIES COLLECTION
-    // Public visitors & customers can view categories.
-    // ONLY the authorized Admin UID can create, update, or delete.
+    // ==========================================
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
-    // 3. HERO BANNERS COLLECTION (Canonical)
-    // Public visitors & customers can view active hero banners on the storefront.
-    // ONLY the authorized Admin UID can create, update, reorder or delete hero banners.
+    // ==========================================
+    // 3. HERO & PROMO BANNERS
+    // ==========================================
     match /heroBanners/{bannerId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
-    // 3B. HOMEPAGE SECTIONS COLLECTION (Canonical Homepage Builder)
-    // Public visitors & customers can view active homepage sections on the storefront.
-    // ONLY the authorized Admin UID can create, update, reorder or delete homepage sections.
     match /homepageSections/{sectionId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
-    // 3C. LEGACY BANNERS COLLECTION (Backwards compatibility)
-    // Public visitors & customers can view legacy banners.
-    // ONLY the authorized Admin UID can create, update, or delete.
     match /banners/{bannerId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
+    // ==========================================
     // 4. COUPONS COLLECTION
-    // Public visitors & customers can read active coupons to apply discounts during checkout.
-    // ONLY the authorized Admin UID can create, edit, or delete coupons.
+    // ==========================================
     match /coupons/{couponId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isStaffEditorOrFull();
     }
 
-    // 5. STORE SETTINGS & MARKETING PIXELS
-    // Public visitors can read store branding and public tracking configurations.
-    // ONLY the authorized Admin UID can update store settings.
+    // ==========================================
+    // 5. STORE SETTINGS & MARKETING CONFIGS
+    // ==========================================
     match /settings/{settingId} {
       allow read: if true;
-      allow create, update, delete: if isAuthorizedAdmin();
+      allow create, update, delete: if isOwner();
     }
 
+    // ==========================================
     // 6. ORDERS COLLECTION
-    // Customers can place orders (create).
-    // The authorized Admin UID can read, manage, update statuses, and delete all orders.
-    // Customers can read their own specific order if authenticated with matching UID or customer email.
+    // ==========================================
     match /orders/{orderId} {
-      allow create: if true; // Allows instant customer checkout
-      allow read: if isAuthorizedAdmin() || (
+      // Safe guest & customer checkout
+      allow create: if isValidOrderCreate();
+
+      // Read: Active staff or authenticated customer reading their own order
+      allow read: if isStaffActive() || (
         isAuthenticated() && (
           (resource.data.keys().hasAny(['userId']) && resource.data.userId == request.auth.uid) ||
           (resource.data.keys().hasAny(['customerId']) && resource.data.customerId == request.auth.uid) ||
           (resource.data.keys().hasAny(['customer']) && resource.data.customer.keys().hasAny(['email']) && resource.data.customer.email == request.auth.token.email)
         )
       );
-      allow update, delete: if isAuthorizedAdmin();
+
+      // Order status updates, tracking changes, or deletion (Editor, Full Access, Owner)
+      allow update, delete: if isStaffEditorOrFull();
     }
 
-    // 7. USERS COLLECTION
-    // - Customers can create & update their own account profile document.
-    // - Customers CANNOT set or elevate role to 'admin' or 'superadmin'.
-    // - ONLY the authorized Admin UID can read all users or perform administrative account management.
+    // ==========================================
+    // 7. USERS COLLECTION (Customer Accounts)
+    // ==========================================
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAuthorizedAdmin();
+      allow read: if isUser(userId) || isStaffActive();
       
-      // Creating own profile: customers are forced to have 'customer' role
-      allow create: if isOwner(userId) && (
+      allow create: if isUser(userId) && (
         !request.resource.data.keys().hasAny(['role']) || 
         request.resource.data.role == 'customer' ||
-        isAuthorizedAdmin()
+        isStaffActive()
       );
       
-      // Updating profile: customers cannot change their role
       allow update: if (
-        isOwner(userId) && 
+        isUser(userId) && 
         (
           !request.resource.data.keys().hasAny(['role']) || 
           request.resource.data.role == resource.data.role ||
           request.resource.data.role == 'customer'
         )
-      ) || isAuthorizedAdmin();
+      ) || isStaffEditorOrFull();
       
-      allow delete: if isAuthorizedAdmin();
+      allow delete: if isStaffEditorOrFull();
     }
 
+    // ==========================================
     // 8. REVIEWS COLLECTION
-    // - Public visitors & customers can read verified product reviews.
-    // - Creation: Authenticated customer creating review for their own verified delivered order
-    //   Enforces that userId matches request.auth.uid and order exists with delivered status.
-    // - Update: Customers can only update their own review rating/comment.
-    // - Deletion & Full Moderation: ONLY the authorized Master Admin UID.
+    // ==========================================
     match /reviews/{reviewId} {
       allow read: if true;
 
-      // Create Rule: Authenticated user, matching UID, rating between 1-5, and valid delivered order verification
-      allow create: if isAuthorizedAdmin() || (
+      allow create: if isStaffEditorOrFull() || (
         isAuthenticated() &&
         request.resource.data.userId == request.auth.uid &&
         request.resource.data.rating >= 1 &&
@@ -149,10 +210,8 @@ service cloud.firestore {
           (
             exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId)) &&
             (
-              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'Delivered' ||
-              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'delivered' ||
-              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.orderStatus == 'Delivered' ||
-              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.orderStatus == 'delivered'
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status in ['Delivered', 'delivered'] ||
+              get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.orderStatus in ['Delivered', 'delivered']
             ) &&
             (
               get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid ||
@@ -162,8 +221,7 @@ service cloud.firestore {
         )
       );
 
-      // Update Rule: User can edit their own review rating & comment (without modifying userId, productId, orderId)
-      allow update: if isAuthorizedAdmin() || (
+      allow update: if isStaffEditorOrFull() || (
         isAuthenticated() &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.userId == resource.data.userId &&
@@ -172,16 +230,23 @@ service cloud.firestore {
         request.resource.data.rating <= 5
       );
 
-      // Delete Rule: Admin moderation only
-      allow delete: if isAuthorizedAdmin();
+      allow delete: if isStaffEditorOrFull();
     }
 
-    // 9. COURIER CONFIGURATIONS COLLECTION (ADMIN ONLY)
-    // Contains sensitive API keys, secrets, client credentials, and webhook endpoints for courier integrations (Pathao, Steadfast, RedX, etc.)
-    // STRICT ZERO-TRUST SECURITY: Strictly restricted to authorized Administrators only.
-    // Public visitors, regular customers, and unauthorized users are completely forbidden from reading, querying, creating, modifying, or deleting courier credentials.
+    // ==========================================
+    // 9. COURIER CONFIGURATIONS (SENSITIVE KEYS)
+    // ==========================================
     match /courier_configs/{courierId} {
-      allow read, write: if isAuthorizedAdmin();
+      // Strictly restricted to Permanent Store Owner only
+      allow read, write: if isOwner();
+    }
+
+    // ==========================================
+    // 10. PAYMENT METHODS & GATEWAY CONFIGS
+    // ==========================================
+    match /payment_methods/{id} {
+      allow read: if true;
+      allow write: if isOwner();
     }
   }
 }
