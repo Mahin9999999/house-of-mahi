@@ -47,7 +47,11 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/((?!sitemap\\.xml|robots\\.txt).*)",
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!sitemap\\.xml|robots\\.txt|api/).*)",
       "destination": "/index.html"
     }
   ]
