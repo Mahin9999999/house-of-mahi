@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import { courierRouter } from '../server/routes/courier';
-import paymentRouter from '../server/routes/payment';
-import { trackingRouter } from '../server/routes/tracking';
-import adminStaffRouter from '../server/routes/adminStaff';
+import { courierRouter } from './_server/routes/courier';
+import paymentRouter from './_server/routes/payment';
+import { trackingRouter } from './_server/routes/tracking';
+import adminStaffRouter from './_server/routes/adminStaff';
 
 const app = express();
 app.use(cors());

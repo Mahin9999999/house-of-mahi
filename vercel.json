@@ -37,11 +37,7 @@
       ]
     }
   ],
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**"
-    }
-  },
+  "buildCommand": "rm -rf api/_server && cp -r server api/_server && npm run build",
   "rewrites": [
     {
       "source": "/sitemap.xml",
