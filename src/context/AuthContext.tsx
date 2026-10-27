@@ -135,6 +135,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Helper to fetch staff record directly via email or uid point lookups
+  const fetchStaffDataDirectly = async (user: User): Promise<any | null> => {
+    const cleanEmail = (user.email || '').toLowerCase().trim();
+
+    // 1. Point lookup by user.uid
+    try {
+      const uidSnap = await getDoc(doc(db, 'admin_users', user.uid));
+      if (uidSnap.exists()) {
+        return uidSnap.data();
+      }
+    } catch (e) {
+      // Continue to email lookups
+    }
+
+    // 2. Direct point lookup by clean email (StaffManagementModule format)
+    if (cleanEmail) {
+      try {
+        const emailSnap = await getDoc(doc(db, 'admin_users', cleanEmail));
+        if (emailSnap.exists()) {
+          return emailSnap.data();
+        }
+      } catch (e) {
+        // Continue to legacy lookups
+      }
+
+      // 3. Legacy point lookup by sanitized email ID
+      try {
+        const legacyDocId = `staff_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+        const legacySnap = await getDoc(doc(db, 'admin_users', legacyDocId));
+        if (legacySnap.exists()) {
+          return legacySnap.data();
+        }
+      } catch (e) {
+        // Continue to query fallback
+      }
+
+      // 4. Safe query fallback (if user has list permissions)
+      try {
+        const q = query(
+          collection(db, 'admin_users'),
+          where('email', '==', cleanEmail),
+          limit(1)
+        );
+        const querySnap = await getDocs(q);
+        if (!querySnap.empty) {
+          return querySnap.docs[0].data();
+        }
+      } catch (queryErr) {
+        // Silently catch query permission rejections without erroring out
+      }
+    }
+
+    return null;
+  };
+
   // Fetch or create user profile and resolve staff role directly in Firestore
   const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
     try {
@@ -154,33 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStaffProfile(ownerStaff);
         setIsAdmin(true);
       } else {
-        // Query Firestore /admin_users directly (via UID or email)
         try {
-          let staffData: any = null;
-          let docId = user.uid;
-
-          const directDoc = await getDoc(doc(db, 'admin_users', user.uid));
-          if (directDoc.exists()) {
-            staffData = directDoc.data();
-          } else if (user.email) {
-            // Check by authorized Gmail
-            const q = query(
-              collection(db, 'admin_users'),
-              where('email', '==', user.email.toLowerCase().trim()),
-              limit(1)
-            );
-            const querySnap = await getDocs(q);
-            if (!querySnap.empty) {
-              const matchedDoc = querySnap.docs[0];
-              docId = matchedDoc.id;
-              staffData = matchedDoc.data();
-              // Update with user's actual UID for faster lookups
-              await updateDoc(doc(db, 'admin_users', matchedDoc.id), {
-                uid: user.uid,
-                lastLoginAt: serverTimestamp()
-              }).catch(() => {});
-            }
-          }
+          const staffData = await fetchStaffDataDirectly(user);
 
           if (staffData && staffData.status === 'active') {
             const role: StaffRole = (['editor', 'viewer', 'full_access'].includes(staffData.role) ? staffData.role : 'viewer') as StaffRole;
@@ -200,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAdmin(false);
           }
         } catch (adminErr) {
-          console.warn('Staff verification query note:', adminErr);
+          console.warn('Staff verification note:', adminErr);
         }
       }
 
@@ -308,13 +338,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Customer Google Sign-In
+  // Customer Google Sign-In with safe cancellation handling
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const cred = await signInWithPopup(auth, provider);
-    if (cred.user) {
-      await fetchUserProfile(cred.user);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const cred = await signInWithPopup(auth, provider);
+      if (cred.user) {
+        await fetchUserProfile(cred.user);
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        // User deliberately closed Google sign-in window; ignore safely
+        return;
+      }
+      console.error('Google Sign In Error:', error);
+      throw error;
     }
   };
 
@@ -408,28 +447,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true };
       }
 
-      // Check /admin_users directly
+      // Check /admin_users directly via point lookups
       const cleanEmail = (cred.user.email || '').toLowerCase().trim();
-      let staffData: any = null;
-
-      const directSnap = await getDoc(doc(db, 'admin_users', cred.user.uid));
-      if (directSnap.exists()) {
-        staffData = directSnap.data();
-      } else if (cleanEmail) {
-        const q = query(
-          collection(db, 'admin_users'),
-          where('email', '==', cleanEmail),
-          limit(1)
-        );
-        const qSnap = await getDocs(q);
-        if (!qSnap.empty) {
-          staffData = qSnap.docs[0].data();
-          await updateDoc(doc(db, 'admin_users', qSnap.docs[0].id), {
-            uid: cred.user.uid,
-            lastLoginAt: serverTimestamp()
-          }).catch(() => {});
-        }
-      }
+      const staffData = await fetchStaffDataDirectly(cred.user);
 
       if (!staffData) {
         await firebaseSignOut(auth);
@@ -565,3 +585,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

@@ -6,7 +6,6 @@ import {
   ShieldAlert, 
   Trash2, 
   Ban, 
-  RefreshCw, 
   Lock, 
   X,
   Mail,
@@ -24,7 +23,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { useAuth, AUTHORIZED_ADMIN_UID, StaffRole } from '../../context/AuthContext';
+import { useAuth, AUTHORIZED_ADMIN_UID, AUTHORIZED_ADMIN_EMAILS, StaffRole } from '../../context/AuthContext';
 
 interface StaffMember {
   id: string;
@@ -53,6 +52,19 @@ export const StaffManagementModule: React.FC = () => {
   const [staffRole, setStaffRole] = useState<StaffRole>('viewer');
   const [authorizing, setAuthorizing] = useState(false);
 
+  // Helper to verify if an account is an authorized Owner
+  const isProtectedOwner = (member: { id?: string; email?: string; isOwner?: boolean; isPermanent?: boolean }) => {
+    const email = (member.email || '').toLowerCase().trim();
+    const id = (member.id || '').toLowerCase().trim();
+    return (
+      member.isPermanent === true ||
+      member.isOwner === true ||
+      member.id === AUTHORIZED_ADMIN_UID ||
+      id === AUTHORIZED_ADMIN_UID.toLowerCase() ||
+      AUTHORIZED_ADMIN_EMAILS.some((ownerEmail) => ownerEmail.toLowerCase() === email || ownerEmail.toLowerCase() === id)
+    );
+  };
+
   // Real-time Firestore subscription to admin_users collection
   useEffect(() => {
     if (!currentUser || !isOwner) {
@@ -71,16 +83,23 @@ export const StaffManagementModule: React.FC = () => {
 
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          const isOwnerUser = docSnap.id === AUTHORIZED_ADMIN_UID || data.isOwner === true;
+          const cleanEmail = (data.email || docSnap.id).toLowerCase().trim();
+          const isOwnerUser = isProtectedOwner({
+            id: docSnap.id,
+            email: cleanEmail,
+            isOwner: data.isOwner
+          });
+
           if (isOwnerUser) {
             hasOwner = true;
           }
+
           list.push({
             id: docSnap.id,
-            uid: data.uid || docSnap.id,
-            name: data.name || 'Staff Member',
-            email: data.email || '',
-            role: isOwnerUser ? 'owner' : (data.role || 'viewer'),
+            uid: data.uid || (docSnap.id !== cleanEmail ? docSnap.id : undefined),
+            name: data.name || (isOwnerUser ? 'Store Owner' : 'Staff Member'),
+            email: cleanEmail,
+            role: isOwnerUser ? 'owner' : (['editor', 'viewer', 'full_access'].includes(data.role) ? data.role : 'viewer'),
             status: data.status || 'active',
             isOwner: isOwnerUser,
             isPermanent: isOwnerUser,
@@ -89,13 +108,13 @@ export const StaffManagementModule: React.FC = () => {
           });
         });
 
-        // Ensure permanent owner is always prominently present at top
+        // Ensure permanent owner is always present at top of list
         if (!hasOwner) {
           list.unshift({
             id: AUTHORIZED_ADMIN_UID,
             uid: AUTHORIZED_ADMIN_UID,
             name: 'Store Owner',
-            email: currentUser.email || 'mahincollege1@gmail.com',
+            email: currentUser.email || AUTHORIZED_ADMIN_EMAILS[0],
             role: 'owner',
             status: 'active',
             isOwner: true,
@@ -116,7 +135,7 @@ export const StaffManagementModule: React.FC = () => {
     return () => unsubscribe();
   }, [currentUser, isOwner]);
 
-  // Handle Authorizing a new Staff Gmail directly in Firestore
+  // Handle Authorizing a new Staff Gmail directly in Firestore using email as Doc ID
   const handleAuthorizeStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !staffEmail.trim()) return;
@@ -134,15 +153,23 @@ export const StaffManagementModule: React.FC = () => {
       return;
     }
 
+    // Prevent adding owner email as regular staff
+    if (AUTHORIZED_ADMIN_EMAILS.some((e) => e.toLowerCase() === cleanEmail)) {
+      alert('This email belongs to an authorized Store Owner and cannot be registered as a staff member.');
+      setAuthorizing(false);
+      return;
+    }
+
     // Check if email already in staff list
-    if (staff.some((s) => s.email.toLowerCase() === cleanEmail)) {
+    if (staff.some((s) => s.email.toLowerCase() === cleanEmail || s.id.toLowerCase() === cleanEmail)) {
       alert('This Gmail address is already registered in the staff directory.');
       setAuthorizing(false);
       return;
     }
 
     try {
-      const docId = `staff_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+      // Deterministic docId by clean email prevents collection query permission errors
+      const docId = cleanEmail;
       const newStaffDoc = {
         name: staffName.trim() || 'Staff Member',
         email: cleanEmail,
@@ -164,7 +191,14 @@ export const StaffManagementModule: React.FC = () => {
       setStaffRole('viewer');
     } catch (err: any) {
       console.error('Error authorizing staff:', err);
-      alert(err.message || 'Failed to authorize staff account in Firestore.');
+      const isPerm = err?.code === 'permission-denied' || err?.message?.toLowerCase().includes('permission');
+      if (isPerm) {
+        alert(
+          'Missing or insufficient permissions: Firebase Firestore-এ নতুন Staff সংরক্ষণ করার অনুমতি প্রত্যাখ্যান হয়েছে। অনুগ্রহ করে নিশ্চিত করুন যে আপনি অনুমোদিত Store Owner হিসেবে লগইন আছেন এবং houseofmahi প্রোজেক্টের Firestore Rules আপডেট করা হয়েছে।'
+        );
+      } else {
+        alert(err.message || 'Failed to authorize staff account in Firestore.');
+      }
     } finally {
       setAuthorizing(false);
     }
@@ -172,8 +206,12 @@ export const StaffManagementModule: React.FC = () => {
 
   // Change staff role
   const handleRoleChange = async (member: StaffMember, newRole: StaffRole) => {
-    if (member.isPermanent || member.id === AUTHORIZED_ADMIN_UID) {
+    if (isProtectedOwner(member)) {
       alert('Permanent Store Owner role cannot be modified.');
+      return;
+    }
+    if (newRole === 'owner') {
+      alert('Cannot assign Owner role to staff members.');
       return;
     }
     if (!confirm(`Are you sure you want to change this staff member's role to ${newRole.toUpperCase()}?`)) {
@@ -193,7 +231,7 @@ export const StaffManagementModule: React.FC = () => {
 
   // Toggle staff status (suspend / activate)
   const handleToggleStatus = async (member: StaffMember) => {
-    if (member.isPermanent || member.id === AUTHORIZED_ADMIN_UID) {
+    if (isProtectedOwner(member)) {
       alert('Permanent Store Owner cannot be suspended.');
       return;
     }
@@ -215,7 +253,7 @@ export const StaffManagementModule: React.FC = () => {
 
   // Revoke staff access
   const handleRevokeStaff = async (member: StaffMember) => {
-    if (member.isPermanent || member.id === AUTHORIZED_ADMIN_UID) {
+    if (isProtectedOwner(member)) {
       alert('Permanent Store Owner cannot be deleted.');
       return;
     }
@@ -352,7 +390,7 @@ export const StaffManagementModule: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-stone-100">
               {staff.map((member) => {
-                const isPermanentOwner = member.isPermanent || member.id === AUTHORIZED_ADMIN_UID;
+                const isPermanentOwner = isProtectedOwner(member);
 
                 return (
                   <tr key={member.id} className="hover:bg-stone-50/50 transition-colors">

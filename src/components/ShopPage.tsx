@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SlidersHorizontal, ArrowUpDown, X, Search, ChevronRight } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpDown, X, Search, ChevronRight, Sparkles, ShieldCheck, Truck } from 'lucide-react';
 import { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { useAdminStore } from '../store/useAdminStore';
@@ -106,11 +106,11 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       
-      {/* Header Bar */}
+      {/* Header Bar with Semantic H1 for Search Engine Discovery */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EFE8DE] mb-6">
         <div>
-          <div className="flex items-center space-x-2 text-2xl font-serif font-bold text-[#4A1525]">
-            <span>Shop</span>
+          <h1 className="flex items-center flex-wrap gap-2 text-2xl font-serif font-bold text-[#4A1525]">
+            <span>Shop Jewellery Collection</span>
             {currentTopCat && (
               <>
                 <ChevronRight size={18} className="text-slate-400" />
@@ -123,10 +123,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                 <span className="text-base font-sans font-medium text-amber-900">{activeCategoryObj.name}</span>
               </>
             )}
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Showing 1–{filteredAndSortedProducts.length} of {products.length} results
-            {searchQuery && <span className="font-semibold text-[#4A1525]"> for "{searchQuery}"</span>}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Showing 1–{filteredAndSortedProducts.length} of {products.length} designs
+            {searchQuery && <span className="font-semibold text-[#4A1525]"> matching "{searchQuery}"</span>}
           </p>
         </div>
 
@@ -138,6 +138,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               value={sortBy} 
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-transparent focus:outline-hidden font-semibold text-slate-700 cursor-pointer"
+              aria-label="Sort products"
             >
               <option value="featured">Featured</option>
               <option value="low-high">Price: Low to High</option>
@@ -149,7 +150,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
       </div>
 
       {/* Top Categories Filter Pills */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none" role="navigation" aria-label="Category Filters">
         <button 
           onClick={() => setSelectedCategory('all')} 
           className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${selectedCategory === 'all' || !selectedCategory ? 'bg-[#4A1525] text-white shadow-xs' : 'bg-white text-slate-700 border border-[#E0D5C5] hover:bg-[#FAF7F2]'}`}
@@ -183,7 +184,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
 
       {/* Subcategory Secondary Row (Visible when a Top Category is Active and has Subcategories) */}
       {currentTopCat && currentSubcategories.length > 0 && (
-        <div className="flex items-center space-x-2 overflow-x-auto py-2.5 px-3 bg-amber-50/70 rounded-xl border border-amber-200/60 mb-6 mt-2 scrollbar-none animate-in fade-in">
+        <div className="flex items-center space-x-2 overflow-x-auto py-2.5 px-3 bg-amber-50/70 rounded-xl border border-amber-200/60 mb-6 mt-2 scrollbar-none animate-in fade-in" role="navigation" aria-label="Subcategory Filters">
           <span className="text-[11px] font-bold text-slate-500 shrink-0 uppercase tracking-wider">Subcategory:</span>
           
           <button
@@ -236,14 +237,57 @@ export const ShopPage: React.FC<ShopPageProps> = ({
           </p>
           <button 
             onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
-            className="bg-[#4A1525] text-white text-xs font-bold px-6 py-2.5 rounded-full cursor-pointer"
+            className="bg-[#4A1525] text-white text-xs font-bold px-6 py-2.5 rounded-full cursor-pointer hover:bg-[#380e1b] transition-colors"
           >
             Reset All Filters
           </button>
         </div>
       )}
 
+      {/* Informative Content & Jewellery Buying Guide (Content Optimization) */}
+      <section className="mt-16 pt-10 border-t border-[#EFE8DE] space-y-6 bg-[#FAF7F2]/60 rounded-2xl p-6 sm:p-8 border border-[#E9DFD1]">
+        <div className="max-w-4xl space-y-2">
+          <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#4A1525]">
+            Curated Jewellery & Accessories Collection in Bangladesh
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Welcome to House of Mahi, your premier destination for bridal and celebratory semi-precious jewellery across Bangladesh. From traditional Mughal Kundan choker sets and Meenakari jhumkas to sparkling CZ rings and handcrafted silk potli bags, every piece is curated to offer lasting brilliance and festive elegance.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-white p-5 rounded-xl border border-[#E8DFC2] shadow-xs space-y-2">
+            <div className="flex items-center space-x-2 text-[#4A1525]">
+              <Sparkles size={18} />
+              <h3 className="font-serif font-bold text-sm text-[#4A1525]">Artisanal Heritage</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Carefully designed with high-grade micro gold polish, filigree detailing, and tarnish-resistant protective coating for dependable wear.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-xl border border-[#E8DFC2] shadow-xs space-y-2">
+            <div className="flex items-center space-x-2 text-[#4A1525]">
+              <Truck size={18} />
+              <h3 className="font-serif font-bold text-sm text-[#4A1525]">Cash on Delivery</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Fast and secure doorstep delivery across Dhaka, Chittagong, Sylhet, and all 64 districts with full cash on delivery convenience.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-xl border border-[#E8DFC2] shadow-xs space-y-2">
+            <div className="flex items-center space-x-2 text-[#4A1525]">
+              <ShieldCheck size={18} />
+              <h3 className="font-serif font-bold text-sm text-[#4A1525]">Pre-Dispatch Inspection</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Every shipment undergoes strict quality control and is packaged in protective cushioned boxing to ensure safe arrival.
+            </p>
+          </div>
+        </div>
+      </section>
+
     </main>
   );
 };
-

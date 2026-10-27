@@ -20,28 +20,50 @@ service cloud.firestore {
         request.auth.uid == 'nJqbz63bzIXRiycPC5JYA13pVOi1' ||
         (request.auth.token.email != null && (
           request.auth.token.email == 'mahincollege1@gmail.com' ||
+          request.auth.token.email.lower() == 'mahincollege1@gmail.com' ||
           request.auth.token.email == 'admin@houseofmahi.com' ||
-          request.auth.token.email == 'houseofmahibd@gmail.com'
+          request.auth.token.email.lower() == 'admin@houseofmahi.com' ||
+          request.auth.token.email == 'houseofmahibd@gmail.com' ||
+          request.auth.token.email.lower() == 'houseofmahibd@gmail.com'
         ))
       );
     }
 
+    // Helper to verify if a staff document exists and is active
+    function isStaffDocActive(docPath) {
+      return exists(docPath) && get(docPath).data.status == 'active';
+    }
+
+    // Helper to verify if a staff document has editor or full access
+    function isStaffDocEditorOrFull(docPath) {
+      return isStaffDocActive(docPath) && (
+        get(docPath).data.role == 'editor' ||
+        get(docPath).data.role == 'full_access'
+      );
+    }
+
     // ACTIVE STAFF VALIDATION (Owner, Full Access, Editor, Viewer)
+    // Validates both UID-keyed and Email-keyed staff documents
     function isStaffActive() {
       return isAuthenticated() && (
         isOwner() ||
-        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'active')
+        isStaffDocActive(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
+        (request.auth.token.email != null && (
+          isStaffDocActive(/databases/$(database)/documents/admin_users/$(request.auth.token.email)) ||
+          isStaffDocActive(/databases/$(database)/documents/admin_users/$(request.auth.token.email.lower()))
+        ))
       );
     }
 
     // OPERATIONAL STAFF VALIDATION (Owner, Full Access, Editor - Can modify store data)
     function isStaffEditorOrFull() {
-      return isStaffActive() && (
+      return isAuthenticated() && (
         isOwner() ||
-        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
-         (get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role == 'editor' ||
-          get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role == 'full_access'))
+        isStaffDocEditorOrFull(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
+        (request.auth.token.email != null && (
+          isStaffDocEditorOrFull(/databases/$(database)/documents/admin_users/$(request.auth.token.email)) ||
+          isStaffDocEditorOrFull(/databases/$(database)/documents/admin_users/$(request.auth.token.email.lower()))
+        ))
       );
     }
 
@@ -72,30 +94,47 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isOwner() ||
         request.auth.uid == staffId ||
-        (resource != null && resource.data.email == request.auth.token.email)
+        (request.auth.token.email != null && (
+          request.auth.token.email == staffId ||
+          request.auth.token.email.lower() == staffId
+        )) ||
+        (resource != null && resource.data.email != null && (
+          resource.data.email == request.auth.token.email ||
+          resource.data.email.lower() == request.auth.token.email.lower()
+        ))
       );
 
       // Only Permanent Owner can authorize new staff
       allow create: if isOwner() && (
         request.resource.data.role in ['viewer', 'editor', 'full_access'] &&
-        request.resource.data.isOwner == false
+        (!('isOwner' in request.resource.data) || request.resource.data.isOwner == false)
       );
 
       // Updates strictly protect Permanent Owner from demotion or suspension
       allow update: if isOwner() && (
         // Case 1: Owner updating own profile - cannot change role from owner or suspend
-        (staffId == 'nJqbz63bzIXRiycPC5JYA13pVOi1' &&
+        ((staffId == 'nJqbz63bzIXRiycPC5JYA13pVOi1' || 
+          staffId == 'mahincollege1@gmail.com' || 
+          staffId == 'admin@houseofmahi.com' || 
+          staffId == 'houseofmahibd@gmail.com') &&
          request.resource.data.role == 'owner' &&
          request.resource.data.status == 'active' &&
          request.resource.data.isOwner == true) ||
         // Case 2: Owner managing staff - cannot assign owner role to any other account
         (staffId != 'nJqbz63bzIXRiycPC5JYA13pVOi1' &&
+         staffId != 'mahincollege1@gmail.com' &&
+         staffId != 'admin@houseofmahi.com' &&
+         staffId != 'houseofmahibd@gmail.com' &&
          request.resource.data.role in ['viewer', 'editor', 'full_access'] &&
-         request.resource.data.isOwner == false)
+         (!('isOwner' in request.resource.data) || request.resource.data.isOwner == false))
       );
 
       // Deletions: Permanent Owner record can NEVER be deleted
-      allow delete: if isOwner() && staffId != 'nJqbz63bzIXRiycPC5JYA13pVOi1';
+      allow delete: if isOwner() && 
+                    staffId != 'nJqbz63bzIXRiycPC5JYA13pVOi1' && 
+                    staffId != 'mahincollege1@gmail.com' &&
+                    staffId != 'admin@houseofmahi.com' &&
+                    staffId != 'houseofmahibd@gmail.com';
     }
 
     // ==========================================

@@ -170,6 +170,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({ onShopClick }) => {
                     className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                     referrerPolicy="no-referrer"
                     loading="eager"
+                    fetchPriority={currentSlide === 0 ? 'high' : 'auto'}
                   />
                 </picture>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none"></div>

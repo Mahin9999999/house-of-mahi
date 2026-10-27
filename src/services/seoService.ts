@@ -37,29 +37,40 @@ class SeoService {
   }
 
   /**
-   * Helper to sanitize URL and strip out any hash fragments (#) for canonical SEO conformity
+   * Helper to sanitize URL, strip tracking/filter params and hash fragments (#) for canonical SEO conformity
    */
   public cleanCanonicalUrl(url?: string, fallbackBase = 'https://houseofmahibd.com'): string {
-    if (!url) return fallbackBase;
+    if (!url) return `${fallbackBase.replace(/\/+$/, '')}/`;
     const trimmed = url.trim();
-    if (!trimmed) return fallbackBase;
+    if (!trimmed) return `${fallbackBase.replace(/\/+$/, '')}/`;
+
+    const baseClean = fallbackBase.replace(/\/+$/, '');
 
     // If it's a hash-based path like /#product-xxx or #product-xxx, convert to clean path
     if (trimmed.includes('#product-')) {
       const slug = trimmed.split('#product-')[1]?.split('?')[0] || '';
-      return `${fallbackBase.replace(/\/+$/, '')}/product/${encodeURIComponent(slug)}`;
+      return `${baseClean}/product/${encodeURIComponent(slug)}`;
     }
     if (trimmed.includes('#category-')) {
       const slug = trimmed.split('#category-')[1]?.split('?')[0] || '';
-      return `${fallbackBase.replace(/\/+$/, '')}/category/${encodeURIComponent(slug)}`;
+      return `${baseClean}/category/${encodeURIComponent(slug)}`;
     }
     if (trimmed.includes('#shop')) {
-      return `${fallbackBase.replace(/\/+$/, '')}/shop`;
+      return `${baseClean}/shop`;
     }
 
-    // Strip any other trailing #fragments from canonical URLs (Googlebot does not index hash fragments)
-    const withoutHash = trimmed.split('#')[0];
-    return withoutHash.replace(/\/+$/, '') || fallbackBase;
+    // Strip hash and query parameters (search, filters, fbclid, utm_*) for pure self-referencing canonical
+    let clean = trimmed.split('#')[0];
+    try {
+      const parsed = new URL(clean, baseClean);
+      parsed.search = '';
+      clean = parsed.toString();
+    } catch {
+      clean = clean.split('?')[0];
+    }
+
+    const normalized = clean.replace(/\/+$/, '');
+    return normalized === baseClean ? `${baseClean}/` : normalized;
   }
 
   /**
@@ -87,18 +98,18 @@ class SeoService {
   }): ActiveSeoState {
     const { pageType, globalConfig, pageSeoItem, product, category, customUrl } = params;
 
-    const brand = globalConfig.brandName || 'Houseofmahi';
+    const brand = globalConfig.brandName || 'House of Mahi';
     const baseUrl = globalConfig.canonicalBaseUrl?.replace(/\/+$/, '') || (typeof window !== 'undefined' ? window.location.origin : 'https://houseofmahibd.com');
     const fullCurrentUrl = customUrl || (typeof window !== 'undefined' ? window.location.href : baseUrl);
 
-    let title = globalConfig.homepageTitle || `${brand} | Premium Jewelry & Accessories`;
-    let description = globalConfig.homepageDescription || 'Discover premium luxury jewelry, necklaces, earrings, rings, and handcrafted accessories.';
-    let keywords = globalConfig.siteKeywords || 'jewelry, necklaces, earrings, rings, luxury accessories, bangladesh fashion';
+    let title = globalConfig.homepageTitle || `${brand} | Premium Jewellery & Fashion Accessories`;
+    let description = globalConfig.homepageDescription || 'Discover exquisite jewellery, bangles, and fashion accessories at House of Mahi Bangladesh. Explore curated collections for every festive occasion.';
+    let keywords = globalConfig.siteKeywords || 'House of Mahi, jewellery Bangladesh, bangles, necklaces, earrings, rings, fashion accessories';
     let canonicalUrl = this.cleanCanonicalUrl(fullCurrentUrl, baseUrl);
     let robots = `${globalConfig.robotsIndex ? 'index' : 'noindex'}, ${globalConfig.robotsFollow ? 'follow' : 'nofollow'}`;
     let ogTitle = globalConfig.defaultOgTitle || title;
     let ogDescription = globalConfig.defaultOgDescription || description;
-    let ogImage = globalConfig.defaultOgImage || '';
+    let ogImage = globalConfig.defaultOgImage || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=1200&h=630';
     let ogType = 'website';
     let twitterCard: 'summary' | 'summary_large_image' = globalConfig.defaultTwitterCard || 'summary_large_image';
     let twitterTitle = globalConfig.defaultTwitterTitle || ogTitle;
@@ -137,10 +148,10 @@ class SeoService {
       // OpenGraph overrides
       ogTitle = prodSeo.ogTitle || (product as any).ogTitle || title;
       ogDescription = prodSeo.ogDescription || (product as any).ogDescription || description;
-      ogImage = prodSeo.ogImage || (product as any).ogImage || product.image || globalConfig.defaultOgImage || '';
+      ogImage = prodSeo.ogImage || (product as any).ogImage || product.image || ogImage;
 
       // Twitter / X overrides
-      twitterCard = prodSeo.twitterCard || (product as any).twitterCard || globalConfig.defaultTwitterCard || 'summary_large_image';
+      twitterCard = prodSeo.twitterCard || (product as any).twitterCard || twitterCard;
       twitterTitle = prodSeo.twitterTitle || (product as any).twitterTitle || ogTitle;
       twitterDescription = prodSeo.twitterDescription || (product as any).twitterDescription || ogDescription;
       twitterImage = prodSeo.twitterImage || (product as any).twitterImage || ogImage;
@@ -151,7 +162,7 @@ class SeoService {
         baseUrl,
         items: [
           { name: 'Home', url: `${baseUrl}/` },
-          { name: product.categoryLabel || product.category || 'Jewelry', url: `${baseUrl}/category/${encodeURIComponent(product.category || 'all')}` },
+          { name: product.categoryLabel || product.category || 'Jewellery', url: `${baseUrl}/category/${encodeURIComponent(product.category || 'all')}` },
           { name: product.name, url: canonicalUrl }
         ]
       });
@@ -168,12 +179,9 @@ class SeoService {
       const rawCatCanonical = category.canonicalUrl || `${baseUrl}/category/${encodeURIComponent(catSlug)}`;
       canonicalUrl = this.cleanCanonicalUrl(rawCatCanonical, baseUrl);
       
-      // Custom category title override -> Automatic default
       title = category.seoTitle || `${category.name} Collection | ${brand}`;
-      
-      // Custom category meta description override -> Automatic default
       description = category.seoDescription || this.sanitizeMetaText(category.description, 160) || 
-        `Explore our exclusive ${category.name} collection at ${brand}. Handcrafted jewelry with exceptional quality.`;
+        `Explore our exclusive ${category.name} collection at ${brand}. Handcrafted jewellery with exceptional quality.`;
       
       const secCatKeywords = category.secondaryKeywords || [];
       keywords = [category.primaryKeyword, ...secCatKeywords, category.name, brand].filter(Boolean).join(', ');
@@ -184,7 +192,7 @@ class SeoService {
 
       ogTitle = category.ogTitle || title;
       ogDescription = category.ogDescription || description;
-      ogImage = category.ogImage || category.image || globalConfig.defaultOgImage || '';
+      ogImage = category.ogImage || category.image || ogImage;
 
       twitterTitle = ogTitle;
       twitterDescription = ogDescription;
@@ -214,7 +222,7 @@ class SeoService {
 
       ogTitle = pageSeoItem.ogTitle || title;
       ogDescription = pageSeoItem.ogDescription || description;
-      ogImage = pageSeoItem.ogImage || globalConfig.defaultOgImage || '';
+      ogImage = pageSeoItem.ogImage || ogImage;
 
       twitterCard = pageSeoItem.twitterCard || twitterCard;
       twitterTitle = pageSeoItem.twitterTitle || ogTitle;
@@ -286,12 +294,13 @@ class SeoService {
     if (state.keywords) setMetaTag('name', 'keywords', state.keywords);
     setMetaTag('name', 'robots', state.robots);
 
-    // Canonical Tag
+    // Canonical Tag - update existing or create if absent without creating duplicates
     let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (state.canonicalUrl) {
       if (!canonicalEl) {
         canonicalEl = document.createElement('link');
         canonicalEl.setAttribute('rel', 'canonical');
+        canonicalEl.id = 'canonical-link';
         document.head.appendChild(canonicalEl);
       }
       canonicalEl.setAttribute('href', state.canonicalUrl);
@@ -302,7 +311,10 @@ class SeoService {
     setMetaTag('property', 'og:description', state.ogDescription);
     setMetaTag('property', 'og:url', state.ogUrl);
     setMetaTag('property', 'og:type', state.ogType);
-    if (state.ogImage) setMetaTag('property', 'og:image', state.ogImage);
+    if (state.ogImage) {
+      setMetaTag('property', 'og:image', state.ogImage);
+      setMetaTag('property', 'og:image:secure_url', state.ogImage);
+    }
 
     // Twitter / X Card Tags
     setMetaTag('name', 'twitter:card', state.twitterCard);
@@ -310,18 +322,26 @@ class SeoService {
     setMetaTag('name', 'twitter:description', state.twitterDescription);
     if (state.twitterImage) setMetaTag('name', 'twitter:image', state.twitterImage);
 
-    // 3. JSON-LD Structured Data Injection with XSS Escaping
-    const existingSchemaScript = document.getElementById('houseofmahi-seo-schema');
-    if (existingSchemaScript) {
-      existingSchemaScript.remove();
+    // 3. JSON-LD Structured Data Injection without schema duplication
+    // Remove any legacy initial schema scripts if present
+    const legacyInitialScript = document.getElementById('houseofmahi-initial-schema');
+    if (legacyInitialScript) {
+      legacyInitialScript.remove();
     }
 
+    let schemaScript = document.getElementById('houseofmahi-seo-schema') as HTMLScriptElement | null;
+
     if (state.schemaJson) {
-      const script = document.createElement('script');
-      script.id = 'houseofmahi-seo-schema';
-      script.type = 'application/ld+json';
-      script.textContent = this.serializeSchemaJson(state.schemaJson);
-      document.head.appendChild(script);
+      if (!schemaScript) {
+        schemaScript = document.createElement('script');
+        schemaScript.id = 'houseofmahi-seo-schema';
+        schemaScript.type = 'application/ld+json';
+        document.head.appendChild(schemaScript);
+      }
+      schemaScript.textContent = this.serializeSchemaJson(state.schemaJson);
+    } else if (schemaScript) {
+      // If no page-specific schema, keep clean
+      schemaScript.remove();
     }
   }
 
@@ -350,8 +370,8 @@ class SeoService {
   public generateOrganizationSchema(config: SeoConfig): object {
     const baseUrl = config.canonicalBaseUrl?.replace(/\/+$/, '') || 'https://houseofmahibd.com';
     const sameAs: string[] = [
-      config.socialFacebookUrl,
-      config.socialInstagramUrl,
+      config.socialFacebookUrl || 'https://facebook.com/houseofmahi',
+      config.socialInstagramUrl || 'https://instagram.com/houseofmahi',
       config.socialYoutubeUrl,
       config.socialTiktokUrl,
       config.socialPinterestUrl
@@ -361,21 +381,28 @@ class SeoService {
       '@context': 'https://schema.org',
       '@type': 'Organization',
       '@id': `${baseUrl}/#organization`,
-      name: config.orgName || config.brandName || 'Houseofmahi',
-      legalName: config.orgLegalName || config.brandName || 'Houseofmahi Bangladesh',
+      name: config.orgName || config.brandName || 'House of Mahi',
+      legalName: config.orgLegalName || 'House of Mahi Bangladesh',
       url: config.orgUrl || baseUrl,
-      logo: config.orgLogo || config.defaultOgImage || '',
-      email: config.orgEmail || 'support@houseofmahi.com',
-      telephone: config.orgPhone || '+8801700000000',
+      logo: config.orgLogo || `${baseUrl}/icon-512.png`,
+      email: config.orgEmail || 'mahimamahi456789@gmail.com',
+      telephone: config.orgPhone || '+8801400031902',
       address: {
         '@type': 'PostalAddress',
-        streetAddress: config.orgAddressStreet || 'Gulshan, Dhaka',
-        addressLocality: config.orgAddressLocality || 'Dhaka',
+        streetAddress: config.orgAddressStreet || 'E-76 Jalkuri Majpara, Jalkuri-1420',
+        addressLocality: config.orgAddressLocality || 'Siddirganj, Narayanganj',
         addressRegion: config.orgAddressRegion || 'Dhaka Division',
-        postalCode: config.orgPostalCode || '1212',
+        postalCode: config.orgPostalCode || '1420',
         addressCountry: config.orgCountry || 'BD'
       },
-      sameAs
+      sameAs,
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: config.orgPhone || '+8801400031902',
+        contactType: 'Customer Service',
+        areaServed: 'BD',
+        availableLanguage: ['Bengali', 'English']
+      }
     };
   }
 
@@ -389,21 +416,27 @@ class SeoService {
       '@type': 'WebSite',
       '@id': `${baseUrl}/#website`,
       url: baseUrl,
-      name: config.brandName || 'Houseofmahi',
-      description: config.homepageDescription || 'Houseofmahi Luxury Handcrafted Jewelry & Accessories',
+      name: config.brandName || 'House of Mahi',
+      publisher: {
+        '@id': `${baseUrl}/#organization`
+      },
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${baseUrl}/shop?search={search_term_string}`,
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${baseUrl}/shop?search={search_term_string}`
+        },
         'query-input': 'required name=search_term_string'
       }
     };
   }
 
   /**
-   * Structured Data: Real Product Schema
+   * Structured Data: Real Product Schema (Strictly Authentic Data, No Fake Reviews)
    */
   public generateProductSchema(product: Product, config: SeoConfig, canonicalUrl: string): object | object[] {
     const prodSeo = product.seo || {};
+    const baseUrl = config.canonicalBaseUrl?.replace(/\/+$/, '') || 'https://houseofmahibd.com';
 
     const schemaObj: any = {
       '@context': 'https://schema.org',
@@ -415,7 +448,7 @@ class SeoService {
       sku: product.sku || product.id,
       brand: {
         '@type': 'Brand',
-        name: prodSeo.brand || config.brandName || 'Houseofmahi'
+        name: prodSeo.brand || config.brandName || 'House of Mahi'
       },
       category: product.categoryLabel || product.category,
       offers: {
@@ -428,13 +461,14 @@ class SeoService {
         availability: product.inStock && (product.stockQuantity ?? 1) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         seller: {
           '@type': 'Organization',
-          name: config.brandName || 'House of Mahi'
+          name: config.brandName || 'House of Mahi',
+          url: baseUrl
         },
         shippingDetails: {
           '@type': 'OfferShippingDetails',
           shippingRate: {
             '@type': 'MonetaryAmount',
-            value: '60',
+            value: '80',
             currency: 'BDT'
           },
           shippingDestination: {
@@ -451,8 +485,8 @@ class SeoService {
             },
             transitTime: {
               '@type': 'QuantitativeValue',
-              minValue: 2,
-              maxValue: 5,
+              minValue: 1,
+              maxValue: 4,
               unitCode: 'd'
             }
           }
@@ -468,6 +502,7 @@ class SeoService {
       }
     };
 
+    // Authentic AggregateRating: Only add if there are verified real reviews and positive rating
     if (product.rating > 0 && product.reviewsCount > 0) {
       schemaObj.aggregateRating = {
         '@type': 'AggregateRating',
@@ -478,7 +513,33 @@ class SeoService {
       };
     }
 
-    // Include GTIN, MPN or custom brand if defined
+    // Authentic Individual Reviews: Include if real approved reviews array is populated
+    if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+      const validReviews = product.reviews
+        .filter(r => r.status === 'approved' && r.comment && r.rating)
+        .slice(0, 5)
+        .map(r => ({
+          '@type': 'Review',
+          author: {
+            '@type': 'Person',
+            name: r.userName || 'Verified Buyer'
+          },
+          datePublished: r.date || new Date().toISOString().split('T')[0],
+          reviewBody: r.comment,
+          reviewRating: {
+            '@type': 'Rating',
+            ratingValue: r.rating,
+            bestRating: 5,
+            worstRating: 1
+          }
+        }));
+
+      if (validReviews.length > 0) {
+        schemaObj.review = validReviews;
+      }
+    }
+
+    // Include GTIN or MPN only if actually defined on the product
     if (prodSeo.gtin || (product as any).gtin) {
       schemaObj.gtin = prodSeo.gtin || (product as any).gtin;
     }
@@ -486,7 +547,7 @@ class SeoService {
       schemaObj.mpn = prodSeo.mpn || (product as any).mpn;
     }
 
-    // FAQs structured data attached as FAQPage or mainEntity if present
+    // FAQs structured data attached as FAQPage if present
     const productFaqs = prodSeo.faqs || (product as any).faqs || [];
     if (productFaqs.length > 0) {
       const faqSchema = {
@@ -906,4 +967,3 @@ Sitemap: ${baseUrl}/sitemap.xml
 }
 
 export const seoService = new SeoService();
-

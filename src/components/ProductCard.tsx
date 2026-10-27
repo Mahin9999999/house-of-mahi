@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { Product } from '../types';
+import { getOptimizedCloudinaryUrl } from '../firebase/cloudinaryService';
 
 interface ProductCardProps {
   product: Product;
@@ -21,6 +22,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  // Compute optimized responsive image URL to drastically reduce payload and boost PageSpeed
+  const optimizedImageSrc = useMemo(() => {
+    if (!product.image) return '';
+    if (product.image.includes('cloudinary.com')) {
+      return getOptimizedCloudinaryUrl(product.image, { 
+        width: 450, 
+        height: 450, 
+        crop: 'fill', 
+        quality: 'auto' 
+      });
+    }
+    if (product.image.includes('images.unsplash.com')) {
+      return product.image.replace(/w=\d+/, 'w=450');
+    }
+    return product.image;
+  }, [product.image]);
+
   return (
     <div className="bg-[#FAF7F2] rounded-xl border border-[#E8DFC2]/80 overflow-hidden shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group motion-reduce:hover:translate-y-0 motion-reduce:transition-none">
       <div>
@@ -39,7 +57,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             aria-label={`View ${product.name}`}
           >
             <img 
-              src={product.image} 
+              src={optimizedImageSrc} 
               alt={product.imageAlt || `${product.name} House of Mahi Bangladesh`} 
               onLoad={() => setImageLoaded(true)}
               className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ease-out cursor-pointer motion-reduce:group-hover:scale-100 motion-reduce:transition-none ${
@@ -47,6 +65,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               }`}
               referrerPolicy="no-referrer"
               loading="lazy"
+              decoding="async"
+              width={400}
+              height={400}
             />
           </a>
           <button 
@@ -109,4 +130,3 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
-
