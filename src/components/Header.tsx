@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   ShoppingBag, Heart, Search, Menu, User, ChevronDown, ChevronRight, Globe, X, PhoneCall
 } from 'lucide-react';
@@ -39,6 +39,32 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [selectedDropdownCat, setSelectedDropdownCat] = useState('All Categories');
   const [isAllCategoriesOpen, setIsAllCategoriesOpen] = useState(false);
+
+  // Icon bump animation triggers when counts increase
+  const [cartBump, setCartBump] = useState(false);
+  const [wishlistBump, setWishlistBump] = useState(false);
+  const prevCartRef = useRef(cartCount);
+  const prevWishlistRef = useRef(wishlistCount);
+
+  useEffect(() => {
+    if (cartCount > prevCartRef.current) {
+      setCartBump(true);
+      const t = setTimeout(() => setCartBump(false), 400);
+      prevCartRef.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prevCartRef.current = cartCount;
+  }, [cartCount]);
+
+  useEffect(() => {
+    if (wishlistCount > prevWishlistRef.current) {
+      setWishlistBump(true);
+      const t = setTimeout(() => setWishlistBump(false), 400);
+      prevWishlistRef.current = wishlistCount;
+      return () => clearTimeout(t);
+    }
+    prevWishlistRef.current = wishlistCount;
+  }, [wishlistCount]);
   
   const { currentUser, userProfile } = useAuth();
   const categories = useAdminStore((state) => state.categories);
@@ -230,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="relative p-1.5 text-[#2C221E] hover:text-[#4A1525] transition-colors flex items-center space-x-1.5 cursor-pointer"
             aria-label="Wishlist"
           >
-            <div className="relative">
+            <div className={`relative ${wishlistBump ? 'animate-icon-bump' : ''}`}>
               <Heart size={19} className={wishlistCount > 0 ? 'fill-[#4A1525] text-[#4A1525]' : ''} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 bg-[#4A1525] text-white text-[9px] font-bold w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center">
@@ -247,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="relative p-1.5 text-[#2C221E] hover:text-[#4A1525] transition-colors flex items-center space-x-1.5 cursor-pointer"
             aria-label="Cart"
           >
-            <div className="relative">
+            <div className={`relative ${cartBump ? 'animate-icon-bump' : ''}`}>
               <ShoppingBag size={19} />
               <span className="absolute -top-1.5 -right-2 bg-[#4A1525] text-white text-[9px] font-bold w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center">
                 {cartCount}

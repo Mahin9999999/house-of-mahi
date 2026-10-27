@@ -84,6 +84,45 @@
   will-change: transform, opacity;
 }
 
+/* Toast pop-in: slide up + scale bounce (cart/wishlist feedback) */
+@keyframes toastPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-toast-in {
+  animation: toastPopIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Icon bump: quick scale pulse for cart/wishlist header icons */
+@keyframes iconBump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-icon-bump {
+  animation: iconBump 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
 /* Shimmer gradient overlay utility for skeletons */
 .skeleton-shimmer {
   position: relative;

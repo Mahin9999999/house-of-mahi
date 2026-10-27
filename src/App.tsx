@@ -1127,8 +1127,9 @@ export function App() {
       {/* Legacy Toast Notification (if triggered via local helper) */}
       {toastMessage && (
         <div 
+          key={toastMessage}
           id="global-toast-notification"
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 bg-[#4A1525] text-amber-200 px-4 py-2.5 rounded-xl shadow-2xl border border-amber-400/30 text-xs font-semibold flex items-center space-x-2 animate-bounce"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 bg-[#4A1525] text-amber-200 px-4 py-2.5 rounded-xl shadow-2xl border border-amber-400/30 text-xs font-semibold flex items-center space-x-2 animate-toast-in"
         >
           <Sparkles size={14} className="text-amber-400" />
           <span>{toastMessage}</span>
