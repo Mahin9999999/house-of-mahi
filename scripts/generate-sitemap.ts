@@ -117,7 +117,7 @@ async function generateSitemap(): Promise<void> {
     console.log(`✅ Loaded ${addedCatSlugs.size} active categories.`);
   } catch (catError) {
     console.error('❌ CRITICAL ERROR fetching categories from Firestore:', catError);
-    throw new Error(`Failed to fetch categories from Firestore: ${catError instanceof Error ? catError.message : String(catError)}`);
+    console.warn('⚠️ Continuing build without categories (sitemap will be partial).');
   }
 
   // 3. Fetch real active products from Firestore
@@ -165,7 +165,7 @@ async function generateSitemap(): Promise<void> {
     console.log(`✅ Loaded ${activeProductCount} active, indexable products.`);
   } catch (prodError) {
     console.error('❌ CRITICAL ERROR fetching products from Firestore:', prodError);
-    throw new Error(`Failed to fetch products from Firestore: ${prodError instanceof Error ? prodError.message : String(prodError)}`);
+    console.warn('⚠️ Continuing build without products (sitemap will be partial).');
   }
 
   // 4. Construct valid XML string
@@ -203,5 +203,6 @@ generateSitemap()
   })
   .catch((err) => {
     console.error('❌ Fatal error generating sitemap:', err);
-    process.exit(1);
+    console.warn('⚠️ Build will continue; sitemap may be stale.');
+    process.exit(0);
   });

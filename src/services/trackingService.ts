@@ -106,43 +106,52 @@ class TrackingService {
   /**
    * Sync active configuration and bootstrap / refresh all tracking scripts
    */
+  // Known placeholder / invalid IDs that must never be injected (prevents console warnings)
+  private static readonly BLOCKED_IDS = new Set([
+    '1029384756102938', 'C1234567890TIKTOK', 'G-HOUSEOFMAHI2026', 'GTM-MAHI999',
+    'AW-10948291029', 'mahi_clarity_8e9', 'TEST12345', 'G-7M74DWDRCC',
+    'GTM-PCTP86KQ'
+  ]);
+
   public syncConfig(config: MarketingPixelsConfig) {
     this.config = config;
     if (typeof window === 'undefined') return;
 
-    // 1. Meta / Facebook Pixel (valid Meta pixel IDs are numeric, 10+ digits)
+    const safeTestCode = TrackingService.BLOCKED_IDS.has((config.metaTestEventCode || '').trim()) ? '' : (config.metaTestEventCode || '').trim();
+
+    // 1. Meta / Facebook Pixel
     const metaId = (config.metaPixelId || '').trim();
-    if (config.metaPixelEnabled && /^\d{10,20}$/.test(metaId)) {
-      this.initMetaPixel(metaId, config.metaAdvancedMatching, config.metaTestEventCode);
+    if (config.metaPixelEnabled && /^\d{10,20}$/.test(metaId) && !TrackingService.BLOCKED_IDS.has(metaId)) {
+      this.initMetaPixel(metaId, config.metaAdvancedMatching, safeTestCode);
     }
 
-    // 2. Google Analytics 4 (valid GA4 measurement IDs look like G-XXXXXXXXXX)
+    // 2. Google Analytics 4
     const ga4Id = (config.ga4MeasurementId || '').trim();
-    if (config.ga4Enabled && /^G-[A-Z0-9]{6,12}$/.test(ga4Id)) {
+    if (config.ga4Enabled && /^G-[A-Z0-9]{6,12}$/.test(ga4Id) && !TrackingService.BLOCKED_IDS.has(ga4Id)) {
       this.initGA4(ga4Id, config.ga4Currency || 'BDT', config.ga4DebugMode);
     }
 
-    // 3. Google Tag Manager (valid container IDs look like GTM-XXXXXXX)
+    // 3. Google Tag Manager
     const gtmId = (config.gtmContainerId || '').trim();
-    if (config.gtmEnabled && /^GTM-[A-Z0-9]{4,10}$/.test(gtmId)) {
+    if (config.gtmEnabled && /^GTM-[A-Z0-9]{4,10}$/.test(gtmId) && !TrackingService.BLOCKED_IDS.has(gtmId)) {
       this.initGTM(gtmId);
     }
 
-    // 4. Google Ads Conversion (valid conversion IDs look like AW-XXXXXXXXXX)
+    // 4. Google Ads Conversion
     const gAdsId = (config.googleAdsConversionId || '').trim();
-    if (config.googleAdsEnabled && /^AW-[0-9]{6,15}$/.test(gAdsId)) {
+    if (config.googleAdsEnabled && /^AW-[0-9]{6,15}$/.test(gAdsId) && !TrackingService.BLOCKED_IDS.has(gAdsId)) {
       this.initGoogleAds(gAdsId);
     }
 
-    // 5. TikTok Pixel (alphanumeric, 10+ chars)
+    // 5. TikTok Pixel
     const ttId = (config.tiktokPixelId || '').trim();
-    if (config.tiktokEnabled && /^[A-Z0-9]{10,25}$/i.test(ttId)) {
+    if (config.tiktokEnabled && /^[A-Z0-9]{10,25}$/i.test(ttId) && !TrackingService.BLOCKED_IDS.has(ttId)) {
       this.initTikTokPixel(ttId);
     }
 
     // 6. Microsoft Clarity
     const clarityId = (config.clarityProjectId || '').trim();
-    if (config.clarityEnabled && clarityId.length >= 3) {
+    if (config.clarityEnabled && clarityId.length >= 3 && !TrackingService.BLOCKED_IDS.has(clarityId)) {
       this.initClarity(clarityId);
     }
 
