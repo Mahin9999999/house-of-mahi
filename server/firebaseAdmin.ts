@@ -42,6 +42,41 @@ if (!admin.apps.length) {
   }
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore();
+// Lazy initialization to avoid crashing the serverless function at module load time
+let _adminAuth: ReturnType<typeof admin.auth> | null = null;
+let _adminDb: ReturnType<typeof admin.firestore> | null = null;
+
+export function getAdminAuth() {
+  if (!_adminAuth) {
+    try {
+      _adminAuth = admin.auth();
+    } catch (err) {
+      console.error('[FirebaseAdmin] Failed to get adminAuth:', err);
+      throw err;
+    }
+  }
+  return _adminAuth;
+}
+
+export function getAdminDb() {
+  if (!_adminDb) {
+    try {
+      _adminDb = admin.firestore();
+    } catch (err) {
+      console.error('[FirebaseAdmin] Failed to get adminDb:', err);
+      throw err;
+    }
+  }
+  return _adminDb;
+}
+
+// Backward-compatible exports (initialized lazily on first access)
+export const adminAuth = {
+  verifyIdToken: (token: string) => getAdminAuth().verifyIdToken(token)
+};
+
+export const adminDb = {
+  collection: (name: string) => getAdminDb().collection(name)
+};
+
 export default admin;

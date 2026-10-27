@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { adminAuth, adminDb } from '../firebaseAdmin.ts';
+import { getAdminAuth, getAdminDb } from '../firebaseAdmin.ts';
+const adminAuth = { verifyIdToken: (token: string) => getAdminAuth().verifyIdToken(token) };
+const adminDb = { collection: (name: string) => getAdminDb().collection(name) };
 
 export type StaffRole = 'owner' | 'full_access' | 'editor' | 'viewer';
 
