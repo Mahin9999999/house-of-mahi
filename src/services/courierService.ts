@@ -205,7 +205,7 @@ class BackendCourierProxyAdapter implements ICourierAdapter {
         provider: this.provider,
         courierName: config.name,
         status: 'failed',
-        errorMessage: data?.message || 'Courier service is temporarily unavailable. Please retry.'
+        errorMessage: data?.error || data?.message || 'Courier service is temporarily unavailable. Please retry.'
       };
     } catch {
       return {
@@ -357,7 +357,7 @@ export async function trackCourierOrderViaServer(
       provider: config.provider,
       trackingCode,
       currentStatus: 'Unavailable',
-      statusDetails: data?.message || 'Courier service is temporarily unavailable. Please retry.',
+      statusDetails: data?.error || data?.message || 'Courier service is temporarily unavailable. Please retry.',
       lastUpdated: new Date().toISOString()
     };
   } catch {
@@ -465,7 +465,7 @@ export async function executeAutoCourierBooking(
       provider: candidateCouriers[0]?.provider || 'custom',
       courierName: candidateCouriers[0]?.name || 'Courier',
       status: 'failed',
-      errorMessage: serverData?.message || 'Courier service is temporarily unavailable. Please retry.'
+      errorMessage: serverData?.error || serverData?.message || 'Courier service is temporarily unavailable. Please retry.'
     };
   } catch (serverErr) {
     console.warn('Backend courier dispatch failed:', serverErr);
