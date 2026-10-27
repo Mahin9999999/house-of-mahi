@@ -8,6 +8,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { HeroSlider } from './components/HeroSlider';
 import { FeatureBadges } from './components/FeatureBadges';
 import { ProductCard } from './components/ProductCard';
+import { NotFoundPage } from './components/NotFoundPage';
 import { ShopPage } from './components/ShopPage';
 import { WishlistPage } from './components/WishlistPage';
 import { CartPage } from './components/CartPage';
@@ -54,9 +55,10 @@ export function App() {
     tab: 'home' | 'shop' | 'wishlist' | 'cart' | 'account' | 'about' | 'contact' | 'faq';
     category: string;
     productSlug: string | null;
+    notFound: boolean;
   } => {
     if (typeof window === 'undefined') {
-      return { tab: 'home', category: 'all', productSlug: null };
+      return { tab: 'home', category: 'all', productSlug: null, notFound: false };
     }
 
     const rawPath = window.location.pathname;
@@ -64,51 +66,37 @@ export function App() {
     const lower = cleanPath.toLowerCase();
 
     // Check for direct static pages
-    if (lower === '/shop') return { tab: 'shop', category: 'all', productSlug: null };
-    if (lower === '/about') return { tab: 'about', category: 'all', productSlug: null };
-    if (lower === '/contact') return { tab: 'contact', category: 'all', productSlug: null };
-    if (lower === '/cart') return { tab: 'cart', category: 'all', productSlug: null };
-    if (lower === '/wishlist') return { tab: 'wishlist', category: 'all', productSlug: null };
-    if (lower === '/account') return { tab: 'account', category: 'all', productSlug: null };
-    if (lower === '/faq') return { tab: 'faq', category: 'all', productSlug: null };
-
+    if (lower === '/shop') return { tab: 'shop', category: 'all', productSlug: null, notFound: false };    if (lower === '/about') return { tab: 'about', category: 'all', productSlug: null, notFound: false };    if (lower === '/contact') return { tab: 'contact', category: 'all', productSlug: null, notFound: false };    if (lower === '/cart') return { tab: 'cart', category: 'all', productSlug: null, notFound: false };    if (lower === '/wishlist') return { tab: 'wishlist', category: 'all', productSlug: null, notFound: false };    if (lower === '/account') return { tab: 'account', category: 'all', productSlug: null, notFound: false };    if (lower === '/faq') return { tab: 'faq', category: 'all', productSlug: null, notFound: false };
     // Check for /product/:slug
     if (lower.startsWith('/product/')) {
       const slug = cleanPath.substring('/product/'.length).trim();
-      return { tab: 'shop', category: 'all', productSlug: decodeURIComponent(slug) };
+      return { tab: 'shop', category: 'all', productSlug: decodeURIComponent(slug), notFound: false };
     }
 
     // Check for /category/:slug
     if (lower.startsWith('/category/')) {
       const catSlug = cleanPath.substring('/category/'.length).trim();
-      return { tab: 'shop', category: decodeURIComponent(catSlug), productSlug: null };
-    }
+      return { tab: 'shop', category: decodeURIComponent(catSlug), productSlug: null, notFound: false };    }
 
     // Check legacy hash paths (e.g. /#shop, /#category-bridal, /#product-kundan)
     const hash = window.location.hash || '';
     if (hash.startsWith('#/product/') || hash.startsWith('#product-')) {
       const slug = hash.replace(/^#(\/product\/|product-)/, '').trim();
-      return { tab: 'shop', category: 'all', productSlug: decodeURIComponent(slug) };
+      return { tab: 'shop', category: 'all', productSlug: decodeURIComponent(slug), notFound: false };
     }
     if (hash.startsWith('#/category/') || hash.startsWith('#category-')) {
       const catSlug = hash.replace(/^#(\/category\/|category-)/, '').trim();
-      return { tab: 'shop', category: decodeURIComponent(catSlug), productSlug: null };
-    }
-    if (hash === '#shop') return { tab: 'shop', category: 'all', productSlug: null };
-    if (hash === '#about') return { tab: 'about', category: 'all', productSlug: null };
-    if (hash === '#contact') return { tab: 'contact', category: 'all', productSlug: null };
-    if (hash === '#cart') return { tab: 'cart', category: 'all', productSlug: null };
-    if (hash === '#wishlist') return { tab: 'wishlist', category: 'all', productSlug: null };
-    if (hash === '#account') return { tab: 'account', category: 'all', productSlug: null };
-
-    return { tab: 'home', category: 'all', productSlug: null };
-  };
+      return { tab: 'shop', category: decodeURIComponent(catSlug), productSlug: null, notFound: false };    }
+    if (hash === '#shop') return { tab: 'shop', category: 'all', productSlug: null, notFound: false };    if (hash === '#about') return { tab: 'about', category: 'all', productSlug: null, notFound: false };    if (hash === '#contact') return { tab: 'contact', category: 'all', productSlug: null, notFound: false };    if (hash === '#cart') return { tab: 'cart', category: 'all', productSlug: null, notFound: false };    if (hash === '#wishlist') return { tab: 'wishlist', category: 'all', productSlug: null, notFound: false };    if (hash === '#account') return { tab: 'account', category: 'all', productSlug: null, notFound: false };
+    const isUnknown = lower !== '/' && lower !== '';
+    return { tab: 'home', category: 'all', productSlug: null, notFound: isUnknown };  };
 
   const initialRoute = parseRouteFromLocation();
 
   // Navigation & View State
   const [isAdminView, setIsAdminView] = useState<boolean>(getInitialAdminView());
   const [activeTab, setActiveTabState] = useState<'home' | 'shop' | 'wishlist' | 'cart' | 'account' | 'about' | 'contact' | 'faq'>(initialRoute.tab);
+  const [isNotFound, setIsNotFound] = useState<boolean>(initialRoute.notFound);
   const [selectedCategory, setSelectedCategoryState] = useState<string>(initialRoute.category);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [quickViewProduct, setQuickViewProductState] = useState<Product | null>(null);
@@ -221,6 +209,7 @@ export function App() {
       const route = parseRouteFromLocation();
       setActiveTabState(route.tab);
       setSelectedCategoryState(route.category);
+      setIsNotFound(route.notFound);
 
       // Handle product deep link on popstate
       if (route.productSlug && products.length > 0) {
@@ -1083,6 +1072,18 @@ export function App() {
       <AdminGuard onBackToStore={handleExitAdmin}>
         <AdminDashboard onExitAdmin={handleExitAdmin} />
       </AdminGuard>
+    );
+  }
+
+  // ==========================================
+  // 404 NOT FOUND
+  // ==========================================
+  if (isNotFound) {
+    return (
+      <NotFoundPage
+        onGoHome={() => { setIsNotFound(false); window.history.pushState({}, '', '/'); setActiveTabState('home'); }}
+        onGoShop={() => { setIsNotFound(false); window.history.pushState({}, '', '/shop'); setActiveTabState('shop'); }}
+      />
     );
   }
 

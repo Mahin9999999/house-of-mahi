@@ -60,6 +60,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               src={optimizedImageSrc} 
               alt={product.imageAlt || `${product.name} House of Mahi Bangladesh`} 
               onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                img.onerror = null;
+                img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="%23FAF7F2"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%238C6A2E" font-family="sans-serif" font-size="16">Image unavailable</text></svg>';
+              }}
               className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ease-out cursor-pointer motion-reduce:group-hover:scale-100 motion-reduce:transition-none ${
                 imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}
