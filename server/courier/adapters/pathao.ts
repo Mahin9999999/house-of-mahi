@@ -527,7 +527,7 @@ export class PathaoServerAdapter implements ICourierAdapter {
       recipient_city: cityId,
       recipient_zone: zoneId,
       amount_to_collect: payload.codAmount,
-      item_type: 1, // Standard parcel
+      item_type: 2, // Parcel (2 = Parcel, 1 = Document per Pathao docs)
       item_quantity: payload.itemCount || 1,
       item_weight: payload.parcelWeightKg || 0.5,
       item_description: payload.parcelNote || 'Houseofmahi Parcel',
