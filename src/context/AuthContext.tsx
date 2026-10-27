@@ -501,13 +501,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Dedicated Admin Login (Email/Password fallback for Owner)
+  // Dedicated Admin Login (Email/Password for Owner and Authorized Staff)
   const adminLogin = async (email: string, pass: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      const trimmedEmail = email.trim();
+      const cred = await signInWithEmailAndPassword(auth, trimmedEmail, pass);
       const isMasterAdmin = checkIsMasterAdmin(cred.user);
 
-      if (!isMasterAdmin) {
+      if (isMasterAdmin) {
+        const ownerStaff: StaffProfile = {
+          uid: cred.user.uid,
+          email: cred.user.email || 'mahincollege1@gmail.com',
+          name: cred.user.displayName || 'Store Owner',
+          role: 'owner',
+          status: 'active',
+          isOwner: true,
+          permissions: DEFAULT_ROLE_PERMISSIONS.owner
+        };
+        setStaffProfile(ownerStaff);
+        setIsAdmin(true);
+        await fetchUserProfile(cred.user);
+        return { success: true };
+      }
+
+      // Check Staff /admin_users record directly
+      const cleanEmail = (cred.user.email || trimmedEmail).toLowerCase().trim();
+      const staffData = await fetchStaffDataDirectly(cred.user);
+
+      if (!staffData) {
         await firebaseSignOut(auth);
         setCurrentUser(null);
         setUserProfile(null);
@@ -515,17 +536,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAdmin(false);
         return { 
           success: false, 
-          message: 'Access Denied: Please use the "Sign In with Google" button with your authorized staff Gmail.' 
+          message: `Access Denied: (${cleanEmail}) অ্যাকাউন্টটি অ্যাডমিন প্যানেলে অনুমোদিত স্টাফ বা অ্যাডমিন নয়।` 
         };
       }
 
+      if (staffData.status === 'suspended') {
+        await firebaseSignOut(auth);
+        setCurrentUser(null);
+        setUserProfile(null);
+        setStaffProfile(null);
+        setIsAdmin(false);
+        return { 
+          success: false, 
+          message: 'Access Denied: আপনার স্টাফ অ্যাকাউন্টটি সাময়িকভাবে স্থগিত (Suspended) করা হয়েছে।' 
+        };
+      }
+
+      const role: StaffRole = (['editor', 'viewer', 'full_access'].includes(staffData.role) ? staffData.role : 'viewer') as StaffRole;
+      const staffObj: StaffProfile = {
+        uid: cred.user.uid,
+        email: cleanEmail,
+        name: staffData.name || cred.user.displayName || 'Staff Member',
+        role,
+        status: 'active',
+        isOwner: false,
+        permissions: Array.isArray(staffData.permissions) ? staffData.permissions : DEFAULT_ROLE_PERMISSIONS[role]
+      };
+
+      setStaffProfile(staffObj);
       setIsAdmin(true);
       await fetchUserProfile(cred.user);
       return { success: true };
     } catch (error: any) {
+      console.error('Admin login error:', error);
+      let errorMsg = error.message || 'Failed to authenticate admin credentials.';
+      if (
+        error.code === 'auth/user-not-found' || 
+        error.code === 'auth/wrong-password' || 
+        error.code === 'auth/invalid-credential'
+      ) {
+        errorMsg = 'ভুল ইমেইল বা পাসওয়ার্ড দেওয়া হয়েছে। অনুগ্রহ করে সঠিক তথ্য দিয়ে চেষ্টা করুন।';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMsg = 'একাধিকবার ভুল তথ্য দেওয়ার কারণে সাময়িকভাবে ব্লক করা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+      }
       return { 
         success: false, 
-        message: error.message || 'Failed to authenticate admin credentials.' 
+        message: errorMsg 
       };
     }
   };

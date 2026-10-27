@@ -11,7 +11,10 @@ import {
   Mail,
   User,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   collection, 
@@ -22,7 +25,9 @@ import {
   deleteDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { db, firebaseConfig } from '../../firebase/config';
 import { useAuth, AUTHORIZED_ADMIN_UID, AUTHORIZED_ADMIN_EMAILS, StaffRole } from '../../context/AuthContext';
 
 interface StaffMember {
@@ -49,8 +54,11 @@ export const StaffManagementModule: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffName, setStaffName] = useState('');
   const [staffEmail, setStaffEmail] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
   const [staffRole, setStaffRole] = useState<StaffRole>('viewer');
   const [authorizing, setAuthorizing] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Helper to verify if an account is an authorized Owner
   const isProtectedOwner = (member: { id?: string; email?: string; isOwner?: boolean; isPermanent?: boolean }) => {
@@ -135,42 +143,92 @@ export const StaffManagementModule: React.FC = () => {
     return () => unsubscribe();
   }, [currentUser, isOwner]);
 
-  // Handle Authorizing a new Staff Gmail directly in Firestore using email as Doc ID
+  // Handle Authorizing a new Staff member with Firebase Auth and Firestore record
   const handleAuthorizeStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !staffEmail.trim()) return;
 
     setAuthorizing(true);
     setError(null);
+    setModalError(null);
     setSuccessMessage(null);
 
     const cleanEmail = staffEmail.toLowerCase().trim();
 
     // Prevent granting owner role
     if (staffRole === 'owner') {
-      alert('Cannot create an additional Owner. Only Permanent Store Owner is permitted.');
+      setModalError('Cannot create an additional Owner. Only Permanent Store Owner is permitted.');
       setAuthorizing(false);
       return;
     }
 
     // Prevent adding owner email as regular staff
     if (AUTHORIZED_ADMIN_EMAILS.some((e) => e.toLowerCase() === cleanEmail)) {
-      alert('This email belongs to an authorized Store Owner and cannot be registered as a staff member.');
+      setModalError('এই ইমেইলটি অনুমোদিত Store Owner-এর অ্যাকাউন্ট। এটিকে সাধারণ স্টাফ হিসেবে যুক্ত করা যাবে না।');
       setAuthorizing(false);
       return;
     }
 
     // Check if email already in staff list
     if (staff.some((s) => s.email.toLowerCase() === cleanEmail || s.id.toLowerCase() === cleanEmail)) {
-      alert('This Gmail address is already registered in the staff directory.');
+      setModalError('এই ইমেইলটি স্টাফ তালিকায় ইতিমধ্যে যুক্ত রয়েছে।');
       setAuthorizing(false);
       return;
     }
 
+    // Step 1: Create Firebase Authentication account (if password is provided)
+    let authUid: string | null = null;
+    let authCreated = false;
+
+    if (staffPassword.trim()) {
+      if (staffPassword.length < 6) {
+        setModalError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে (Password must be at least 6 characters).');
+        setAuthorizing(false);
+        return;
+      }
+
+      // Use an isolated secondary Firebase App instance so the current Owner session is untouched
+      const tempAppName = `staff_auth_${Date.now()}`;
+      const secondaryApp = initializeApp(firebaseConfig, tempAppName);
+      const secondaryAuth = getAuth(secondaryApp);
+
+      try {
+        const userCred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, staffPassword.trim());
+        authUid = userCred.user.uid;
+        authCreated = true;
+        await signOut(secondaryAuth);
+      } catch (authErr: any) {
+        console.warn('Firebase Auth secondary creation note:', authErr);
+        if (authErr.code === 'auth/email-already-in-use') {
+          // The account already exists in Firebase Auth (e.g. registered customer or existing auth)
+          // We can proceed to authorize their email in admin_users
+          console.log('Account already exists in Firebase Auth, linking staff permissions in Firestore.');
+        } else if (authErr.code === 'auth/weak-password') {
+          setModalError('Firebase Auth Error: পাসওয়ার্ড অত্যন্ত দুর্বল। কমপক্ষে ৬ অক্ষরের শক্তিশালী পাসওয়ার্ড দিন।');
+          setAuthorizing(false);
+          return;
+        } else if (authErr.code === 'auth/invalid-email') {
+          setModalError('Firebase Auth Error: ইমেইল ফরম্যাট সঠিক নয়।');
+          setAuthorizing(false);
+          return;
+        } else {
+          setModalError(`Firebase Auth তৈরি করতে ব্যর্থ: ${authErr.message || authErr.code}`);
+          setAuthorizing(false);
+          return;
+        }
+      } finally {
+        try {
+          await deleteApp(secondaryApp);
+        } catch (delErr) {
+          console.warn('Secondary app cleanup note:', delErr);
+        }
+      }
+    }
+
+    // Step 2: Write deterministic record to Firestore admin_users collection
     try {
-      // Deterministic docId by clean email prevents collection query permission errors
       const docId = cleanEmail;
-      const newStaffDoc = {
+      const newStaffDoc: any = {
         name: staffName.trim() || 'Staff Member',
         email: cleanEmail,
         role: staffRole,
@@ -182,22 +240,32 @@ export const StaffManagementModule: React.FC = () => {
         updatedAt: serverTimestamp()
       };
 
+      if (authUid) {
+        newStaffDoc.uid = authUid;
+      }
+
       await setDoc(doc(db, 'admin_users', docId), newStaffDoc);
 
-      setSuccessMessage(`Success! ${cleanEmail} is now authorized as ${staffRole.toUpperCase()}. They can sign in immediately using Google.`);
+      setSuccessMessage(
+        `সফলভাবে নতুন স্টাফ যোগ করা হয়েছে! ইমেইল: ${cleanEmail}, রোল: ${staffRole.toUpperCase()}${
+          authCreated ? ' (নতুন Firebase Auth অ্যাকাউন্ট তৈরি সম্পন্ন)' : ''
+        }। স্টাফ এখন এই ক্রেডেনশিয়াল অথবা গুগল দিয়ে অ্যাডমিন প্যানেলে লগইন করতে পারবেন।`
+      );
       setIsModalOpen(false);
       setStaffName('');
       setStaffEmail('');
+      setStaffPassword('');
       setStaffRole('viewer');
+      setModalError(null);
     } catch (err: any) {
       console.error('Error authorizing staff:', err);
       const isPerm = err?.code === 'permission-denied' || err?.message?.toLowerCase().includes('permission');
       if (isPerm) {
-        alert(
-          'Missing or insufficient permissions: Firebase Firestore-এ নতুন Staff সংরক্ষণ করার অনুমতি প্রত্যাখ্যান হয়েছে। অনুগ্রহ করে নিশ্চিত করুন যে আপনি অনুমোদিত Store Owner হিসেবে লগইন আছেন এবং houseofmahi প্রোজেক্টের Firestore Rules আপডেট করা হয়েছে।'
+        setModalError(
+          'Missing or insufficient permissions: Firestore Rules-এ Staff সংরক্ষণের অনুমতি প্রত্যাখ্যাত হয়েছে। নিশ্চিত করুন যে আপনি অনুমোদিত Store Owner হিসেবে লগইন আছেন এবং houseofmahi প্রোজেক্টের Rules Publish করা হয়েছে।'
         );
       } else {
-        alert(err.message || 'Failed to authorize staff account in Firestore.');
+        setModalError(`Firestore Error: ${err.message || err.code || 'Failed to save staff record in Firestore.'}`);
       }
     } finally {
       setAuthorizing(false);
@@ -303,11 +371,14 @@ export const StaffManagementModule: React.FC = () => {
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#800020] hover:bg-[#66001a] text-white text-xs font-semibold shadow-sm transition-all"
+            onClick={() => {
+              setModalError(null);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#800020] hover:bg-[#66001a] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Authorize Staff Gmail</span>
+            <span>Add New Staff</span>
           </button>
         </div>
       </div>
@@ -489,14 +560,33 @@ export const StaffManagementModule: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-100 animate-scale-in">
             <div className="flex items-center justify-between pb-4 border-b border-stone-100">
-              <h3 className="font-serif font-bold text-stone-900 text-base">Authorize Staff Gmail</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#800020]/10 text-[#800020] flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <h3 className="font-serif font-bold text-stone-900 text-base">Add & Authorize Staff</h3>
+              </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setModalError(null);
+                }}
                 className="text-stone-400 hover:text-stone-600 p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Modal Error Banner */}
+            {modalError && (
+              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block text-rose-900">Staff যোগ করতে সমস্যা হয়েছে:</span>
+                  <p className="mt-0.5 break-words font-mono text-[11px] leading-relaxed">{modalError}</p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleAuthorizeStaff} className="py-4 space-y-4">
               <div>
@@ -515,40 +605,69 @@ export const StaffManagementModule: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Google / Gmail Address</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Staff Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
                   <input
                     type="email"
                     required
-                    placeholder="e.g. lkmim999@gmail.com"
+                    placeholder="e.g. staff@houseofmahi.com or gmail"
                     value={staffEmail}
                     onChange={(e) => setStaffEmail(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-xs text-stone-900 outline-none focus:border-[#800020] focus:ring-1 focus:ring-[#800020]"
                   />
                 </div>
                 <p className="text-[10px] text-stone-500 mt-1">
-                  The staff member must sign into the Admin Panel using this exact Google account.
+                  স্টাফ এই ইমেইল ঠিকানা দিয়ে লগইন করবেন।
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Access Role</label>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">
+                  Login Password <span className="font-normal text-stone-400">(Email/Password লগইনের জন্য)</span>
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
+                  <input
+                    type={showStaffPassword ? 'text' : 'password'}
+                    placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন"
+                    value={staffPassword}
+                    onChange={(e) => setStaffPassword(e.target.value)}
+                    className="w-full pl-9 pr-10 py-2 border border-stone-200 rounded-xl text-xs text-stone-900 outline-none focus:border-[#800020] focus:ring-1 focus:ring-[#800020]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStaffPassword(prev => !prev)}
+                    className="absolute right-3 top-2.5 text-stone-400 hover:text-stone-600 transition-colors"
+                  >
+                    {showStaffPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-stone-500 mt-1">
+                  পাসওয়ার্ড দিলে Firebase Authentication অ্যাকাউন্ট তৈরি হবে এবং স্টাফ ইমেইল/পাসওয়ার্ড দিয়ে সরাসরি লগইন করতে পারবেন।
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">Access Role & Permissions</label>
                 <select
                   value={staffRole}
                   onChange={(e) => setStaffRole(e.target.value as StaffRole)}
                   className="w-full px-3 py-2 border border-stone-200 rounded-xl text-xs text-stone-900 outline-none focus:border-[#800020] focus:ring-1 focus:ring-[#800020]"
                 >
-                  <option value="viewer">Viewer (Read-only access)</option>
-                  <option value="editor">Editor (Orders, Products & Courier)</option>
-                  <option value="full_access">Full Access (Operations Manager)</option>
+                  <option value="viewer">Viewer (Read-only access: Orders, Products, Customers)</option>
+                  <option value="editor">Editor (Order updates, Products, Categories, Courier dispatch)</option>
+                  <option value="full_access">Full Access (Operations Manager: Store Operations & Analytics)</option>
                 </select>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setModalError(null);
+                  }}
                   className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 text-xs font-medium hover:bg-stone-50"
                 >
                   Cancel
@@ -556,9 +675,13 @@ export const StaffManagementModule: React.FC = () => {
                 <button
                   type="submit"
                   disabled={authorizing}
-                  className="px-5 py-2 rounded-xl bg-[#800020] hover:bg-[#66001a] text-white text-xs font-semibold shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-[#800020] hover:bg-[#66001a] text-white text-xs font-semibold shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
-                  {authorizing ? 'Authorizing...' : 'Authorize Gmail'}
+                  {authorizing ? (
+                    <span>Authorizing Staff...</span>
+                  ) : (
+                    <span>Authorize & Save Staff</span>
+                  )}
                 </button>
               </div>
             </form>

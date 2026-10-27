@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 
 interface AdminLoginProps {
   onSuccess: () => void;
-  onBackToStore: () => void;
+  onBackToStore?: () => void;
+  onClose?: () => void;
 }
 
-export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore }) => {
+export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +70,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
         <button
           id="back-to-storefront-btn"
           type="button"
-          onClick={onBackToStore}
+          onClick={() => {
+            if (onBackToStore) onBackToStore();
+            else if (onClose) onClose();
+          }}
           disabled={loading || googleLoading}
           className="mb-4 inline-flex items-center text-xs text-amber-200/70 hover:text-amber-200 transition-colors space-x-1.5 disabled:opacity-50 cursor-pointer"
         >
@@ -157,7 +161,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
           <form onSubmit={handleAdminSignIn} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-amber-100/80 mb-1.5">
-                Admin Email Address
+                Admin / Staff Email Address
               </label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-300/50" />
@@ -168,7 +172,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
                   disabled={loading || googleLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@houseofmahi.com"
+                  placeholder="admin@houseofmahi.com or staff email"
                   autoComplete="username"
                   className="w-full bg-[#18050B] border border-amber-500/30 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder:text-amber-200/30 focus:outline-hidden focus:border-amber-400 focus:ring-1 focus:ring-amber-400 disabled:opacity-50"
                 />
@@ -215,7 +219,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToStore
                   <span>Verifying Credentials...</span>
                 </>
               ) : (
-                <span>Authenticate Admin Access</span>
+                <span>Authenticate Admin / Staff Access</span>
               )}
             </button>
           </form>
