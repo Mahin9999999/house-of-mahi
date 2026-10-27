@@ -368,8 +368,10 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
         }
       };
 
-      // Initial subscription attempt on mount
-      startOrdersSubscription();
+      // Initial subscription attempt on mount (only for authenticated staff to avoid permission errors for guests)
+      if (auth.currentUser) {
+        startOrdersSubscription();
+      }
 
       // Auth timing synchronization: When auth state changes (e.g., admin signs in or session restores),
       // re-trigger orders subscription so that authenticated admin gets live orders without manual refresh.
@@ -377,6 +379,9 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
         const unsubAuth = onAuthStateChanged(auth, (user) => {
           if (user) {
             startOrdersSubscription();
+          } else {
+            // Clear orders when signed out to avoid stale data
+            set({ orders: [] });
           }
         });
         unsubscribers.push(unsubAuth);
@@ -518,22 +523,43 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       );
       unsubscribers.push(unsubPagesSeo);
 
-      // 10. Subscribe to Courier Services Configuration
-      const unsubCouriers = subscribeToCourierConfigs(
-        (firestoreCouriers) => {
-          if (firestoreCouriers && firestoreCouriers.length > 0) {
-            const sorted = [...firestoreCouriers].sort((a, b) => a.priority - b.priority);
-            set({ couriers: sorted });
+      // 10. Subscribe to Courier Services Configuration (admin-only; skip for guests to avoid permission warnings)
+      let unsubCouriers: (() => void) | null = null;
+      const startCourierSubscription = () => {
+        if (unsubCouriers) {
+          try { unsubCouriers(); } catch (e) { /* ignore */ }
+          unsubCouriers = null;
+        }
+        if (!auth.currentUser) return;
+        unsubCouriers = subscribeToCourierConfigs(
+          (firestoreCouriers) => {
+            if (firestoreCouriers && firestoreCouriers.length > 0) {
+              const sorted = [...firestoreCouriers].sort((a, b) => a.priority - b.priority);
+              set({ couriers: sorted });
+            } else {
+              set((state) => ({
+                couriers: state.couriers && state.couriers.length > 0 ? state.couriers : INITIAL_COURIER_CONFIGS
+              }));
+            }
+          },
+          (err) => console.warn('Courier config sync warning:', err.message)
+        );
+      };
+      startCourierSubscription();
+      // Re-subscribe when auth state changes
+      try {
+        const unsubCourierAuth = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            startCourierSubscription();
           } else {
-            // Preserve current store couriers if already loaded/modified, otherwise use INITIAL_COURIER_CONFIGS
-            set((state) => ({
-              couriers: state.couriers && state.couriers.length > 0 ? state.couriers : INITIAL_COURIER_CONFIGS
-            }));
+            if (unsubCouriers) { try { unsubCouriers(); } catch (e) { /* ignore */ } unsubCouriers = null; }
           }
-        },
-        (err) => console.warn('Courier config sync warning:', err.message)
-      );
-      unsubscribers.push(unsubCouriers);
+        });
+        unsubscribers.push(unsubCourierAuth);
+      } catch (e) {
+        // ignore
+      }
+      if (unsubCouriers) unsubscribers.push(unsubCouriers);
 
       // 11. Subscribe to Store & Delivery Settings
       const unsubStoreSettings = subscribeToStoreSettings((settings) => {

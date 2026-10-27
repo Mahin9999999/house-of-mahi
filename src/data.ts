@@ -422,41 +422,41 @@ export const INITIAL_ORDERS: Order[] = [];
 
 export const MARKETING_PIXELS_CONFIG: MarketingPixelsConfig = {
   // 1. Meta / Facebook Pixel
-  metaPixelId: '1029384756102938',
+  metaPixelId: '',
   metaPixelName: 'Houseofmahi Meta Pixel (Primary Dataset)',
-  metaPixelEnabled: true,
+  metaPixelEnabled: false,
   metaAdvancedMatching: true,
-  metaTestEventCode: 'TEST12345',
+  metaTestEventCode: '',
 
   // 2. Google Analytics 4
-  ga4MeasurementId: 'G-HOUSEOFMAHI2026',
-  ga4PropertyId: '450912830',
-  ga4DataStreamId: '984120392',
+  ga4MeasurementId: '',
+  ga4PropertyId: '',
+  ga4DataStreamId: '',
   ga4StreamName: 'Houseofmahi Web Storefront',
   ga4WebsiteUrl: 'https://houseofmahibd.com',
   ga4Currency: 'BDT',
   ga4EnhancedMeasurement: true,
   ga4DebugMode: false,
-  ga4Enabled: true,
+  ga4Enabled: false,
 
   // 3. Google Tag Manager
-  gtmContainerId: 'GTM-MAHI999',
+  gtmContainerId: '',
   gtmContainerName: 'Houseofmahi Production GTM',
-  gtmEnabled: true,
+  gtmEnabled: false,
 
   // 4. Google Ads Conversion Tracking
-  googleAdsConversionId: 'AW-10948291029',
-  googleAdsConversionLabel: 'xYzAbC9876543210',
+  googleAdsConversionId: '',
+  googleAdsConversionLabel: '',
   googleAdsConversionName: 'Houseofmahi Purchase Conversion',
-  googleAdsEnabled: true,
+  googleAdsEnabled: false,
 
   // 5. TikTok Pixel
-  tiktokPixelId: 'C1234567890TIKTOK',
+  tiktokPixelId: '',
   tiktokPixelName: 'Houseofmahi TikTok Ads Pixel',
-  tiktokEnabled: true,
+  tiktokEnabled: false,
 
   // 6. Microsoft Clarity
-  clarityProjectId: 'mahi_clarity_8e9',
+  clarityProjectId: '',
   clarityProjectName: 'Houseofmahi UX Heatmaps',
   clarityEnabled: false,
 

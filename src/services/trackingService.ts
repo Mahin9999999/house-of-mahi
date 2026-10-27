@@ -110,34 +110,40 @@ class TrackingService {
     this.config = config;
     if (typeof window === 'undefined') return;
 
-    // 1. Meta / Facebook Pixel
-    if (config.metaPixelEnabled && config.metaPixelId && config.metaPixelId.trim().length > 3) {
-      this.initMetaPixel(config.metaPixelId.trim(), config.metaAdvancedMatching, config.metaTestEventCode);
+    // 1. Meta / Facebook Pixel (valid Meta pixel IDs are numeric, 10+ digits)
+    const metaId = (config.metaPixelId || '').trim();
+    if (config.metaPixelEnabled && /^\d{10,20}$/.test(metaId)) {
+      this.initMetaPixel(metaId, config.metaAdvancedMatching, config.metaTestEventCode);
     }
 
-    // 2. Google Analytics 4
-    if (config.ga4Enabled && config.ga4MeasurementId && config.ga4MeasurementId.trim().length > 3) {
-      this.initGA4(config.ga4MeasurementId.trim(), config.ga4Currency || 'BDT', config.ga4DebugMode);
+    // 2. Google Analytics 4 (valid GA4 measurement IDs look like G-XXXXXXXXXX)
+    const ga4Id = (config.ga4MeasurementId || '').trim();
+    if (config.ga4Enabled && /^G-[A-Z0-9]{6,12}$/.test(ga4Id)) {
+      this.initGA4(ga4Id, config.ga4Currency || 'BDT', config.ga4DebugMode);
     }
 
-    // 3. Google Tag Manager
-    if (config.gtmEnabled && config.gtmContainerId && config.gtmContainerId.trim().length > 3) {
-      this.initGTM(config.gtmContainerId.trim());
+    // 3. Google Tag Manager (valid container IDs look like GTM-XXXXXXX)
+    const gtmId = (config.gtmContainerId || '').trim();
+    if (config.gtmEnabled && /^GTM-[A-Z0-9]{4,10}$/.test(gtmId)) {
+      this.initGTM(gtmId);
     }
 
-    // 4. Google Ads Conversion
-    if (config.googleAdsEnabled && config.googleAdsConversionId && config.googleAdsConversionId.trim().length > 3) {
-      this.initGoogleAds(config.googleAdsConversionId.trim());
+    // 4. Google Ads Conversion (valid conversion IDs look like AW-XXXXXXXXXX)
+    const gAdsId = (config.googleAdsConversionId || '').trim();
+    if (config.googleAdsEnabled && /^AW-[0-9]{6,15}$/.test(gAdsId)) {
+      this.initGoogleAds(gAdsId);
     }
 
-    // 5. TikTok Pixel
-    if (config.tiktokEnabled && config.tiktokPixelId && config.tiktokPixelId.trim().length > 3) {
-      this.initTikTokPixel(config.tiktokPixelId.trim());
+    // 5. TikTok Pixel (alphanumeric, 10+ chars)
+    const ttId = (config.tiktokPixelId || '').trim();
+    if (config.tiktokEnabled && /^[A-Z0-9]{10,25}$/i.test(ttId)) {
+      this.initTikTokPixel(ttId);
     }
 
     // 6. Microsoft Clarity
-    if (config.clarityEnabled && config.clarityProjectId && config.clarityProjectId.trim().length > 3) {
-      this.initClarity(config.clarityProjectId.trim());
+    const clarityId = (config.clarityProjectId || '').trim();
+    if (config.clarityEnabled && clarityId.length >= 3) {
+      this.initClarity(clarityId);
     }
 
     // 7. Custom Scripts

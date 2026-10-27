@@ -76,7 +76,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 
   // Fetch customer orders in real-time
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setOrders([]);
+      setLoadingOrders(false);
+      return;
+    }
 
     setLoadingOrders(true);
     const ordersRef = collection(db, 'orders');

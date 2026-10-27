@@ -188,6 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
           />
           <button 
             type="submit"
+            aria-label="Search"
             className="bg-[#4A1525] text-white px-5 flex items-center justify-center hover:bg-[#360F1B] transition-colors cursor-pointer"
           >
             <Search size={16} />
