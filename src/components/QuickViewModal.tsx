@@ -452,7 +452,6 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
       {/* Modal Dialog with smooth scale-up & fade */}
       <div 
-        ref={scrollContainerRef}
         className={`bg-white w-full max-w-4xl lg:max-w-5xl rounded-2xl shadow-2xl border border-[#E8DFC2] overflow-hidden my-auto relative max-h-[96vh] sm:max-h-[92vh] flex flex-col z-10 transform transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:transform-none ${
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         }`}
@@ -490,7 +489,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-8">
+        <div ref={scrollContainerRef} className="p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-8">
           
           {/* Main 2-Column Product Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 items-start">
