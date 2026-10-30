@@ -133,7 +133,9 @@ trackingRouter.post('/purchase', async (req: Request, res: Response): Promise<vo
     // Resolve marketing credentials (prioritizing secure environment variables, with fallback to config)
     const metaPixelId = (process.env.META_PIXEL_ID || config?.metaPixelId)?.trim();
     const metaCapiAccessToken = (process.env.META_CAPI_ACCESS_TOKEN || (config as any)?.metaCapiAccessToken)?.trim();
-    const effectiveTestCode = (testEventCode || process.env.META_TEST_EVENT_CODE || config?.metaTestEventCode)?.trim();
+    const rawTestCode = (testEventCode || process.env.META_TEST_EVENT_CODE || config?.metaTestEventCode)?.trim() || '';
+    const BLOCKED_TEST_CODES = new Set(['TEST12345', 'TEST42528', 'TEST']);
+    const effectiveTestCode = BLOCKED_TEST_CODES.has(rawTestCode.toUpperCase()) ? undefined : (rawTestCode || undefined);
 
     const results: {
       metaCapi?: { sent: boolean; message: string; fbtraceId?: string };
@@ -307,7 +309,9 @@ trackingRouter.post('/test-event', async (req: Request, res: Response): Promise<
     const { testEventCode, eventName = 'ViewContent', config } = req.body;
     const metaPixelId = (process.env.META_PIXEL_ID || config?.metaPixelId)?.trim();
     const metaCapiAccessToken = (process.env.META_CAPI_ACCESS_TOKEN || (config as any)?.metaCapiAccessToken)?.trim();
-    const effectiveTestCode = (testEventCode || process.env.META_TEST_EVENT_CODE || config?.metaTestEventCode)?.trim();
+    const rawTestCode = (testEventCode || process.env.META_TEST_EVENT_CODE || config?.metaTestEventCode)?.trim() || '';
+    const BLOCKED_TEST_CODES = new Set(['TEST12345', 'TEST42528', 'TEST']);
+    const effectiveTestCode = BLOCKED_TEST_CODES.has(rawTestCode.toUpperCase()) ? undefined : (rawTestCode || undefined);
 
     if (!metaPixelId || !metaCapiAccessToken) {
       res.status(400).json({
