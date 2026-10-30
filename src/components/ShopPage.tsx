@@ -109,7 +109,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
       {/* Header Bar with Semantic H1 for Search Engine Discovery */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EFE8DE] mb-6">
         <div>
-          <h1 className="flex items-center flex-wrap gap-2 text-2xl font-serif font-bold text-[#4A1525]">
+          <h2 className="flex items-center flex-wrap gap-2 text-2xl font-serif font-bold text-[#4A1525]">
             <span>Shop Jewellery Collection</span>
             {currentTopCat && (
               <>
@@ -123,7 +123,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                 <span className="text-base font-sans font-medium text-amber-900">{activeCategoryObj.name}</span>
               </>
             )}
-          </h1>
+          </h2>
           <p className="text-xs text-slate-500 mt-1">
             Showing 1–{filteredAndSortedProducts.length} of {products.length} designs
             {searchQuery && <span className="font-semibold text-[#4A1525]"> matching "{searchQuery}"</span>}

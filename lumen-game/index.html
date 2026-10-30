@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="LUMEN - Light in the Dark. A 2D platformer where light reveals the world.">
+  <title>LUMEN — Light in the Dark</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Touch Controls (mobile) -->
+  <div id="touchControls" class="touch-controls">
+    <div class="touch-left">
+      <button id="btnLeft" class="touch-btn">◀</button>
+      <button id="btnRight" class="touch-btn">▶</button>
+    </div>
+    <div class="touch-right">
+      <button id="btnJump" class="touch-btn jump">▲</button>
+      <button id="btnDash" class="touch-btn dash">»</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/light.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Remove loading text
+    document.body.classList.add('loaded');
+
+    // Bootstrap
+    const canvas = document.getElementById('gameCanvas');
+    const game = new Game(canvas);
+    window.game = game;
+    game.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Touch control wiring
+    const touch = game.input.touch;
+    const bindTouch = (id, key) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); touch[key] = true; if (key === 'jump') game.input.jumpPressed = true; if (key === 'dash') game.input.dashPressed = true; });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); touch[key] = false; });
+      btn.addEventListener('mousedown', (e) => { e.preventDefault(); touch[key] = true; if (key === 'jump') game.input.jumpPressed = true; if (key === 'dash') game.input.dashPressed = true; });
+      btn.addEventListener('mouseup', (e) => { e.preventDefault(); touch[key] = false; });
+      btn.addEventListener('mouseleave', () => { touch[key] = false; });
+    };
+    bindTouch('btnLeft', 'left');
+    bindTouch('btnRight', 'right');
+    bindTouch('btnJump', 'jump');
+    bindTouch('btnDash', 'dash');
+
+    // Mouse click for menus
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      game.handleMouseClick(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    // Keyboard: ESC for pause, M for menu
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape') game.handlePause();
+      if (e.code === 'KeyM' && game.state !== 'playing') {
+        game.transitionTo('menu');
+      }
+    });
+
+    // Game loop
+    let lastTime = 0;
+    function loop(timestamp) {
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      game.update(dt || 0.016);
+      game.draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // Hide touch controls on desktop
+    if (!game.isMobile) {
+      document.getElementById('touchControls').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

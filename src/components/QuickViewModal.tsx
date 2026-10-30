@@ -501,7 +501,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <img 
                   src={activeImage} 
                   alt={product.imageAlt || `${product.name} House of Mahi Bangladesh`} 
-                  className={`w-full h-full object-cover transition-all duration-200 group-hover:scale-105 motion-reduce:transition-none ${
+                  className={`w-full h-full object-contain transition-all duration-200 group-hover:scale-105 motion-reduce:transition-none bg-[#FAF7F2] ${
                     isImageFading ? 'opacity-70 scale-[0.99]' : 'opacity-100 scale-100'
                   }`}
                   referrerPolicy="no-referrer"

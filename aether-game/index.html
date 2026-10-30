@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="AETHER — The Last Light. A 2D platformer where light reveals the world.">
+  <title>AETHER — The Last Light</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="touchControls" class="touch-controls">
+    <div class="touch-left">
+      <button id="btnLeft" class="touch-btn">◀</button>
+      <button id="btnRight" class="touch-btn">▶</button>
+    </div>
+    <div class="touch-right">
+      <button id="btnJump" class="touch-btn jump">▲</button>
+      <button id="btnDash" class="touch-btn dash">»</button>
+    </div>
+  </div>
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const game = new Game(canvas);
+    window.game = game;
+    game.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const touch = game.input.touch;
+    function bindTouch(id, key) {
+      const btn = document.getElementById(id); if (!btn) return;
+      const start = (e) => { e.preventDefault(); touch[key]=true; if(key==='jump') game.input.jumpPressed=true; if(key==='dash') game.input.dashPressed=true; };
+      const end = (e) => { e.preventDefault(); touch[key]=false; };
+      btn.addEventListener('touchstart', start); btn.addEventListener('touchend', end);
+      btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', end); btn.addEventListener('mouseleave', ()=>{touch[key]=false;});
+    }
+    bindTouch('btnLeft','left'); bindTouch('btnRight','right'); bindTouch('btnJump','jump'); bindTouch('btnDash','dash');
+    canvas.addEventListener('click', (e) => { const r=canvas.getBoundingClientRect(); game.handleMouseClick(e.clientX-r.left, e.clientY-r.top); });
+    window.addEventListener('keydown', (e) => {
+      if (e.code==='Escape') game.handlePause();
+      if (e.code==='KeyM' && game.state!==STATE.PLAYING) game.transitionTo(STATE.MENU);
+    });
+    if (!game.isMobile) document.getElementById('touchControls').style.display='none';
+    document.body.classList.add('loaded');
+    let lastTime=0;
+    function loop(ts) { const dt=(ts-lastTime)/1000; lastTime=ts; game.update(dt||0.016); game.draw(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

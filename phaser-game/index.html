@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="AETHER — The Last Light. A 2D platformer built with Phaser 3.">
+  <title>AETHER — The Last Light</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; }
+    #game-container { width: 100%; height: 100%; }
+    canvas { display: block; }
+    body::before { content: 'Loading AETHER...'; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffff; font-size: 24px; font-weight: bold; z-index: 100; animation: pulse 1.5s infinite; }
+    body.loaded::before { display: none; }
+    @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/scenes.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    document.body.classList.add('loaded');
+  </script>
+</body>
+</html>
