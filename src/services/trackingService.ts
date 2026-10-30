@@ -109,7 +109,7 @@ class TrackingService {
   // Known placeholder / invalid IDs that must never be injected (prevents console warnings)
   private static readonly BLOCKED_IDS = new Set([
     '1029384756102938', 'C1234567890TIKTOK', 'G-HOUSEOFMAHI2026', 'GTM-MAHI999',
-    'AW-10948291029', 'mahi_clarity_8e9', 'TEST12345', 'G-7M74DWDRCC',
+    'AW-10948291029', 'mahi_clarity_8e9', 'TEST12345',
     'GTM-PCTP86KQ'
   ]);
 
