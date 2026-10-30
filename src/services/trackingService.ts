@@ -118,7 +118,9 @@ class TrackingService {
     if (typeof window === 'undefined') return;
 
     const rawCode = (config.metaTestEventCode || '').trim();
-    const safeTestCode = (TrackingService.BLOCKED_IDS.has(rawCode) || /^TEST/i.test(rawCode)) ? '' : rawCode;
+    // Only allow valid Meta test event codes (must start with TEST + alphanumeric)
+    const isValidTestCode = /^TEST[A-Z0-9]+$/i.test(rawCode);
+    const safeTestCode = isValidTestCode ? rawCode : '';
 
     // 1. Meta / Facebook Pixel
     const metaId = (config.metaPixelId || '').trim();
